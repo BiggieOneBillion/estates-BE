@@ -1,0 +1,16 @@
+# MongoDB Configuration
+MONGODB_URI=mongodb://your-production-mongodb-uri/estate-management
+
+# JWT Configuration
+JWT_SECRET=your-production-jwt-secret
+JWT_EXPIRES_IN=24h
+
+# App Configuration
+PORT=3000
+
+# Environment
+NODE_ENV=production
+
+# Email Configuration
+EMAIL_USER=your-gmail@gmail.com
+EMAIL_PASSWORD=your-app-password
