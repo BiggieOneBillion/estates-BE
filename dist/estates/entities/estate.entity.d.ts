@@ -1,4 +1,4 @@
-import { Document } from 'mongoose';
+import { Document, Schema as MongooseSchema } from 'mongoose';
 export declare enum SubscriptionPlan {
     MONTHLY = "monthly",
     YEARLY = "yearly",
@@ -10,6 +10,7 @@ export declare enum SubscriptionStatus {
     CANCELLED = "cancelled"
 }
 export declare class Estate extends Document {
+    owner?: string;
     name: string;
     location: {
         address: string;
@@ -38,7 +39,7 @@ export declare class Estate extends Document {
     createdAt: Date;
     updatedAt: Date;
 }
-export declare const EstateSchema: import("mongoose").Schema<Estate, import("mongoose").Model<Estate, any, any, any, Document<unknown, any, Estate> & Estate & Required<{
+export declare const EstateSchema: MongooseSchema<Estate, import("mongoose").Model<Estate, any, any, any, Document<unknown, any, Estate> & Estate & Required<{
     _id: unknown;
 }> & {
     __v: number;

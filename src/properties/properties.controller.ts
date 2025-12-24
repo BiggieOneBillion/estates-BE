@@ -16,7 +16,7 @@ export class PropertiesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ESTATE_ADMIN, UserRole.LANDLORD)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LANDLORD)
   create(@Body() createPropertyDto: CreatePropertyDto) {
     return this.propertiesService.create(createPropertyDto);
   }
@@ -38,14 +38,14 @@ export class PropertiesController {
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ESTATE_ADMIN, UserRole.LANDLORD)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LANDLORD)
   update(@Param('id') id: string, @Body() updatePropertyDto: UpdatePropertyDto) {
     return this.propertiesService.update(id, updatePropertyDto);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ESTATE_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   remove(@Param('id') id: string) {
     return this.propertiesService.remove(id);
   }

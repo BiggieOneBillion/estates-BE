@@ -24,8 +24,10 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    async login(loginDto) {
-        return this.authService.login(loginDto);
+    async login(loginDto, req) {
+        const userAgent = req.headers['user-agent'];
+        const isMobile = /mobile/i.test(userAgent);
+        return this.authService.login(loginDto, isMobile);
     }
     async VerifyLoginEmail(body) {
         return this.authService.validateUserEmailLogin({
@@ -37,10 +39,35 @@ let AuthController = class AuthController {
         return this.authService.register(registerDto);
     }
     async VerifyRegistrationEmail(body) {
-        return this.authService.verifyEmail({ email: body.email, code: body.code });
+        console.log(body.data);
+        return this.authService.verifyEmail(body.data);
     }
     getProfile(req) {
         return req.user;
+    }
+    async requestPasswordReset(body) {
+        return this.authService.sendPasswordResetOTP(body.email);
+    }
+    async verifyPasswordResetOTP(body, res) {
+        const { token } = await this.authService.verifyPasswordResetOTP(body.email, body.code);
+        res.cookie('reset_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 5 * 60 * 1000,
+            sameSite: 'strict',
+        });
+        return {
+            message: 'OTP verified successfully. You can now reset your password.',
+        };
+    }
+    async resetPassword(body, req, res) {
+        const resetToken = req.cookies?.reset_token;
+        if (!resetToken) {
+            throw new common_1.UnauthorizedException('Reset token is missing or expired');
+        }
+        await this.authService.resetPassword(resetToken, body.newPassword);
+        res.clearCookie('reset_token');
+        return { message: 'Password has been reset successfully' };
     }
 };
 exports.AuthController = AuthController;
@@ -51,8 +78,9 @@ __decorate([
     (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
+    __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
@@ -85,6 +113,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Email Verification successful' }),
     (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid credentials' }),
     (0, swagger_1.ApiTags)('Authentication'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Post)('verify-email'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -104,6 +133,42 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "getProfile", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({ summary: 'Request password reset' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Password reset OTP sent' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid email' }),
+    (0, swagger_1.ApiTags)('Authentication'),
+    (0, common_1.Post)('forgot-password'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "requestPasswordReset", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({ summary: 'Verify password reset OTP' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'OTP verified successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid OTP' }),
+    (0, swagger_1.ApiTags)('Authentication'),
+    (0, common_1.Post)('verify-reset-otp'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "verifyPasswordResetOTP", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({ summary: 'Reset password' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Password reset successful' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid or expired token' }),
+    (0, swagger_1.ApiTags)('Authentication'),
+    (0, common_1.Post)('reset-password'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Res)({ passthrough: true })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "resetPassword", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

@@ -12,6 +12,9 @@ const mongoose_1 = require("@nestjs/mongoose");
 const estates_service_1 = require("./estates.service");
 const estates_controller_1 = require("./estates.controller");
 const estate_entity_1 = require("./entities/estate.entity");
+const user_entity_1 = require("../users/entities/user.entity");
+const users_service_1 = require("../users/users.service");
+const mail_service_1 = require("../common/services/mail.service");
 let EstatesModule = class EstatesModule {
 };
 exports.EstatesModule = EstatesModule;
@@ -19,9 +22,10 @@ exports.EstatesModule = EstatesModule = __decorate([
     (0, common_1.Module)({
         imports: [
             mongoose_1.MongooseModule.forFeature([{ name: estate_entity_1.Estate.name, schema: estate_entity_1.EstateSchema }]),
+            mongoose_1.MongooseModule.forFeature([{ name: user_entity_1.User.name, schema: user_entity_1.UserSchema }]),
         ],
         controllers: [estates_controller_1.EstatesController],
-        providers: [estates_service_1.EstatesService],
+        providers: [estates_service_1.EstatesService, users_service_1.UsersService, mail_service_1.MailService],
         exports: [estates_service_1.EstatesService],
     })
 ], EstatesModule);
