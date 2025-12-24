@@ -1,9 +1,5 @@
 # Estate Management System
 
-<p align="center">
-  <img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" />
-</p>
-
 A modern, scalable Estate Management System built with **NestJS** and **MongoDB**. This project provides a comprehensive solution for managing estates, properties, and community access.
 
 ---
