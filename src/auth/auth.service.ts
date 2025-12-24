@@ -16,7 +16,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User, UserRole } from 'src/users/entities/user.entity';
 import { Model } from 'mongoose';
 import { MailService } from 'src/common/services/mail.service';
-import { Console } from 'console';
 
 @Injectable()
 export class AuthService {
@@ -27,22 +26,36 @@ export class AuthService {
     private mailService: MailService,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<any> {
+  async validateUser(
+    email: string,
+    password: string,
+    isMobile: boolean,
+  ): Promise<any> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new BadRequestException('Invalid credentials');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    console.log('Password Valid', isPasswordValid);
+
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new BadRequestException('Invalid credentials');
     }
 
-    if (!user.isEmailVerified) {
+    if (!isMobile && user.primaryRole !== UserRole.SUPER_ADMIN) { // checks if the device is mobile if not so, then only super admin can log in.
+      return {
+        message: 'You must be an estate owner',
+        status: 404,
+      };
+    }
+
+    if (!user.isEmailVerified && user.primaryRole === UserRole.SUPER_ADMIN) {
       const payload: JwtPayload = {
         sub: user._id as string,
         email: user.email,
-        roles: user.roles,
+        roles: user.primaryRole as UserRole,
         // estate: user.estate,
       };
       // Return custom response instead of throwing exception
@@ -62,7 +75,9 @@ export class AuthService {
     user.verificationToken = verificationToken;
     await user.save();
 
-    // // Send verification email
+    console.log('Login Verification token---', verificationToken);
+
+    // Send verification email
     // await this.mailService.sendVerificationEmail(
     //   email,
     //   verificationToken,
@@ -76,8 +91,12 @@ export class AuthService {
     return userObject;
   }
 
-  async login(loginDto: LoginDto) {
-    const result = await this.validateUser(loginDto.email, loginDto.password);
+  async login(loginDto: LoginDto, isMobile: boolean) {
+    const result = await this.validateUser(
+      loginDto.email,
+      loginDto.password,
+      isMobile,
+    );
 
     // Check if the result is the custom unverified email response
     if (result.status === 222) {
@@ -93,13 +112,20 @@ export class AuthService {
   async validateUserEmailLogin(info: { email: string; code: string }) {
     const { email, code } = info;
 
-    const user = await this.usersService.findOne(email);
+    console.log('Email:', email); // Add this line to log the email
+    console.log('Code:', code); // Add this line to log the cod
+
+    const user = await this.usersService.findByEmail(email);
+
+    // console.log('User:', user); // Add this line to log the user
 
     if (!user) {
       throw new BadRequestException('Invalid credentials');
     }
 
     const isVerificationCodeValid = code === user.verificationToken;
+
+    // console.log('Verification code valid:', isVerificationCodeValid); // Add this line to log the verification code validity
 
     if (!isVerificationCodeValid) {
       throw new BadRequestException('Invalid credentials');
@@ -114,7 +140,7 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user._id as string,
       email: user.email,
-      roles: user.roles,
+      roles: user.primaryRole as UserRole,
       // estate: user.estate,
     };
 
@@ -125,7 +151,11 @@ export class AuthService {
   }
 
   async validateUserRegistering(registerDto: RegisterDto): Promise<any> {
+    // console.log('Inside service');
     const existingUser = await this.usersService.findByEmail(registerDto.email);
+
+    // console.log('Inside service 1', existingUser);
+
     if (existingUser) {
       throw new ConflictException('Email already exists');
     }
@@ -135,17 +165,24 @@ export class AuthService {
       100000 + Math.random() * 900000,
     ).toString();
 
+    // console.log('Inside service 2', verificationToken);
+
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+
+    // console.log('Inside service 4', hashedPassword);
+
+    // console.log('Hashed password:', hashedPassword);
     const newUser = new this.userModel({
       ...registerDto,
-      roles: [UserRole.SUPER_ADMIN],
+      primaryRole: UserRole.SUPER_ADMIN,
       password: hashedPassword,
       verificationToken,
-      isEmailVerified: false,
     });
 
+    // console.log('New user:', newUser); // Add this line to log the newUser object
+
     const savedUser = await newUser.save();
-    // console.log('Happy time');
+    console.log('Registration verification token', verificationToken);
     // await this.mailService.sendVerificationEmail(
     //   registerDto.email,
     //   verificationToken,
@@ -157,27 +194,29 @@ export class AuthService {
       lastName: savedUser.lastName,
       email: savedUser.email,
       phone: savedUser.phone,
-      roles: savedUser.roles,
+      roles: savedUser.primaryRole,
       isActive: savedUser.isActive,
       isEmailVerified: savedUser.isEmailVerified,
       isTemporaryPassword: savedUser.isTemporaryPassword,
       id: savedUser._id,
-      permissions: savedUser.permissions,
+      permissions: savedUser.basePermissions,
     };
     return resObj;
   }
 
   async register(registerDto: RegisterDto) {
     const user = await this.validateUserRegistering(registerDto);
+    console.log('USER', user);
     const payload: JwtPayload = {
-      sub: user._id,
+      sub: user.id.toString(),
       email: user.email,
       roles: user.roles,
       estate: user.estate,
     };
 
+    // console.log('PAYLOAD', payload);
+
     return {
-      user,
       access_token: this.jwtService.sign(payload),
     };
   }
@@ -189,6 +228,10 @@ export class AuthService {
         email: email,
       })
       .exec();
+
+    if (!emailExistAndIsNotVerified) {
+      throw new BadRequestException('Email does not exist');
+    }
 
     if (emailExistAndIsNotVerified?.isEmailVerified) {
       throw new BadRequestException('Email already verified');
@@ -209,5 +252,99 @@ export class AuthService {
       message: 'Email Verification Successful',
       status: 200,
     };
+  }
+
+  // Add these methods to the AuthService class
+
+  async sendPasswordResetOTP(email: string) {
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user) {
+      throw new BadRequestException('No account found with this email');
+    }
+
+    // Generate a 6-digit OTP
+    const resetOTP = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store the OTP and set an expiration time (15 minutes from now)
+    user.passwordResetToken = resetOTP;
+    user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    await user.save();
+
+    // Send the OTP via email
+    await this.mailService.sendPasswordResetEmail(
+      email,
+      resetOTP,
+      `${user.firstName} ${user.lastName}`,
+    );
+
+    return { message: 'Password reset OTP has been sent to your email' };
+  }
+
+  async verifyPasswordResetOTP(email: string, otp: string) {
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user) {
+      throw new BadRequestException('No account found with this email');
+    }
+
+    // Check if OTP is valid and not expired
+    if (
+      user.passwordResetToken !== otp ||
+      !user.passwordResetExpires ||
+      user.passwordResetExpires < new Date()
+    ) {
+      throw new BadRequestException('Invalid or expired OTP');
+    }
+
+    // Generate a short-lived JWT token (5 minutes)
+    const payload = {
+      sub: user._id as string,
+      email: user.email,
+      type: 'password_reset',
+    };
+
+    const token = this.jwtService.sign(payload, { expiresIn: '5m' });
+
+    return { token };
+  }
+
+  async resetPassword(resetToken: string, newPassword: string) {
+    try {
+      // Verify the token
+      const payload = this.jwtService.verify(resetToken);
+
+      // Check if it's a password reset token
+      if (payload.type !== 'password_reset') {
+        throw new UnauthorizedException('Invalid token type');
+      }
+
+      const user = await this.userModel.findById(payload.sub);
+
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update the password and clear reset tokens
+      user.password = hashedPassword;
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      user.isTemporaryPassword = false;
+
+      await user.save();
+
+      return { message: 'Password has been reset successfully' };
+    } catch (error) {
+      if (
+        error.name === 'JsonWebTokenError' ||
+        error.name === 'TokenExpiredError'
+      ) {
+        throw new UnauthorizedException('Invalid or expired token');
+      }
+      throw error;
+    }
   }
 }

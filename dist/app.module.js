@@ -24,6 +24,11 @@ const initial_seeds_1 = require("./common/seeders/initial-seeds");
 const user_entity_1 = require("./users/entities/user.entity");
 const estate_entity_1 = require("./estates/entities/estate.entity");
 const mail_service_1 = require("./common/services/mail.service");
+const logger_middleware_1 = require("./common/middleware/logger.middleware");
+const token_module_1 = require("./gatePassToken/token.module");
+const cloudinary_module_1 = require("./cloudinary/cloudinary.module");
+const notifications_module_1 = require("./notifications/notifications.module");
+const events_module_1 = require("./events/events.module");
 let AppModule = class AppModule {
     initialSeedService;
     constructor(initialSeedService) {
@@ -31,6 +36,12 @@ let AppModule = class AppModule {
     }
     async onModuleInit() {
         await this.initialSeedService.seed();
+    }
+    configure(consumer) {
+        consumer.apply(logger_middleware_1.LoggerMiddleware).forRoutes({
+            path: '*',
+            method: common_1.RequestMethod.ALL,
+        });
     }
 };
 exports.AppModule = AppModule;
@@ -57,6 +68,10 @@ exports.AppModule = AppModule = __decorate([
             users_module_1.UsersModule,
             estates_module_1.EstatesModule,
             properties_module_1.PropertiesModule,
+            token_module_1.TokenModule,
+            cloudinary_module_1.CloudinaryModule,
+            notifications_module_1.NotificationsModule,
+            events_module_1.EventsModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService, initial_seeds_1.InitialSeedService, mail_service_1.MailService],

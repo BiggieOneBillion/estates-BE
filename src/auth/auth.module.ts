@@ -20,13 +20,13 @@ import { MailService } from 'src/common/services/mail.service';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '24h' },
+        signOptions: { expiresIn: '365d' },
       }),
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, MailService],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

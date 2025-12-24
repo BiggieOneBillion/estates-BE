@@ -32,20 +32,27 @@ let AuthService = class AuthService {
         this.userModel = userModel;
         this.mailService = mailService;
     }
-    async validateUser(email, password) {
+    async validateUser(email, password, isMobile) {
         const user = await this.usersService.findByEmail(email);
         if (!user) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
+            throw new common_1.BadRequestException('Invalid credentials');
         }
         const isPasswordValid = await bcrypt.compare(password, user.password);
+        console.log('Password Valid', isPasswordValid);
         if (!isPasswordValid) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
+            throw new common_1.BadRequestException('Invalid credentials');
         }
-        if (!user.isEmailVerified) {
+        if (!isMobile && user.primaryRole !== user_entity_1.UserRole.SUPER_ADMIN) {
+            return {
+                message: 'You must be an estate owner',
+                status: 404,
+            };
+        }
+        if (!user.isEmailVerified && user.primaryRole === user_entity_1.UserRole.SUPER_ADMIN) {
             const payload = {
                 sub: user._id,
                 email: user.email,
-                roles: user.roles,
+                roles: user.primaryRole,
             };
             return {
                 status: 222,
@@ -58,12 +65,13 @@ let AuthService = class AuthService {
         const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
         user.verificationToken = verificationToken;
         await user.save();
+        console.log('Login Verification token---', verificationToken);
         const userObject = user.toObject();
         delete userObject.password;
         return userObject;
     }
-    async login(loginDto) {
-        const result = await this.validateUser(loginDto.email, loginDto.password);
+    async login(loginDto, isMobile) {
+        const result = await this.validateUser(loginDto.email, loginDto.password, isMobile);
         if (result.status === 222) {
             return result;
         }
@@ -74,7 +82,9 @@ let AuthService = class AuthService {
     }
     async validateUserEmailLogin(info) {
         const { email, code } = info;
-        const user = await this.usersService.findOne(email);
+        console.log('Email:', email);
+        console.log('Code:', code);
+        const user = await this.usersService.findByEmail(email);
         if (!user) {
             throw new common_1.BadRequestException('Invalid credentials');
         }
@@ -88,7 +98,7 @@ let AuthService = class AuthService {
         const payload = {
             sub: user._id,
             email: user.email,
-            roles: user.roles,
+            roles: user.primaryRole,
         };
         return {
             user,
@@ -104,36 +114,36 @@ let AuthService = class AuthService {
         const hashedPassword = await bcrypt.hash(registerDto.password, 10);
         const newUser = new this.userModel({
             ...registerDto,
-            roles: [user_entity_1.UserRole.SUPER_ADMIN],
+            primaryRole: user_entity_1.UserRole.SUPER_ADMIN,
             password: hashedPassword,
             verificationToken,
-            isEmailVerified: false,
         });
         const savedUser = await newUser.save();
+        console.log('Registration verification token', verificationToken);
         const resObj = {
             firstName: savedUser.firstName,
             lastName: savedUser.lastName,
             email: savedUser.email,
             phone: savedUser.phone,
-            roles: savedUser.roles,
+            roles: savedUser.primaryRole,
             isActive: savedUser.isActive,
             isEmailVerified: savedUser.isEmailVerified,
             isTemporaryPassword: savedUser.isTemporaryPassword,
             id: savedUser._id,
-            permissions: savedUser.permissions,
+            permissions: savedUser.basePermissions,
         };
         return resObj;
     }
     async register(registerDto) {
         const user = await this.validateUserRegistering(registerDto);
+        console.log('USER', user);
         const payload = {
-            sub: user._id,
+            sub: user.id.toString(),
             email: user.email,
             roles: user.roles,
             estate: user.estate,
         };
         return {
-            user,
             access_token: this.jwtService.sign(payload),
         };
     }
@@ -144,6 +154,9 @@ let AuthService = class AuthService {
             email: email,
         })
             .exec();
+        if (!emailExistAndIsNotVerified) {
+            throw new common_1.BadRequestException('Email does not exist');
+        }
         if (emailExistAndIsNotVerified?.isEmailVerified) {
             throw new common_1.BadRequestException('Email already verified');
         }
@@ -158,6 +171,62 @@ let AuthService = class AuthService {
             message: 'Email Verification Successful',
             status: 200,
         };
+    }
+    async sendPasswordResetOTP(email) {
+        const user = await this.usersService.findByEmail(email);
+        if (!user) {
+            throw new common_1.BadRequestException('No account found with this email');
+        }
+        const resetOTP = Math.floor(100000 + Math.random() * 900000).toString();
+        user.passwordResetToken = resetOTP;
+        user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+        await user.save();
+        await this.mailService.sendPasswordResetEmail(email, resetOTP, `${user.firstName} ${user.lastName}`);
+        return { message: 'Password reset OTP has been sent to your email' };
+    }
+    async verifyPasswordResetOTP(email, otp) {
+        const user = await this.usersService.findByEmail(email);
+        if (!user) {
+            throw new common_1.BadRequestException('No account found with this email');
+        }
+        if (user.passwordResetToken !== otp ||
+            !user.passwordResetExpires ||
+            user.passwordResetExpires < new Date()) {
+            throw new common_1.BadRequestException('Invalid or expired OTP');
+        }
+        const payload = {
+            sub: user._id,
+            email: user.email,
+            type: 'password_reset',
+        };
+        const token = this.jwtService.sign(payload, { expiresIn: '5m' });
+        return { token };
+    }
+    async resetPassword(resetToken, newPassword) {
+        try {
+            const payload = this.jwtService.verify(resetToken);
+            if (payload.type !== 'password_reset') {
+                throw new common_1.UnauthorizedException('Invalid token type');
+            }
+            const user = await this.userModel.findById(payload.sub);
+            if (!user) {
+                throw new common_1.BadRequestException('User not found');
+            }
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            user.password = hashedPassword;
+            user.passwordResetToken = undefined;
+            user.passwordResetExpires = undefined;
+            user.isTemporaryPassword = false;
+            await user.save();
+            return { message: 'Password has been reset successfully' };
+        }
+        catch (error) {
+            if (error.name === 'JsonWebTokenError' ||
+                error.name === 'TokenExpiredError') {
+                throw new common_1.UnauthorizedException('Invalid or expired token');
+            }
+            throw error;
+        }
     }
 };
 exports.AuthService = AuthService;

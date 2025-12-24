@@ -11,33 +11,128 @@ import { Model } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
-import { User } from './entities/user.entity';
+import {
+  AdminPosition,
+  Permission,
+  User,
+  UserRole,
+} from './entities/user.entity';
+import { MailService } from 'src/common/services/mail.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    private readonly mailService: MailService,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto, creator: string): Promise<User> {
     const existingUser = await this.userModel.findOne({
       email: createUserDto.email,
     });
+
     if (existingUser) {
       throw new ConflictException('Email already exists');
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    const newUser = new this.userModel({
-      ...createUserDto,
-      password: hashedPassword,
-    });
+    const newUser =
+      createUserDto.primaryRole === UserRole.ADMIN
+        ? new this.userModel({
+            ...createUserDto,
+            password: hashedPassword,
+            adminDetails: {
+              ...createUserDto.adminDetails,
+              positionPermissions: this.getPositionPermissions(
+                createUserDto.adminDetails?.position!,
+              ),
+              appointedAt: new Date(),
+              appointedBy: creator,
+              hierarchy: {
+                createdBy: creator,
+                reportsTo: creator,
+                manages: [],
+                relationshipEstablishedAt: new Date(),
+              },
+              isTemporaryPassword: true,
+            },
+          })
+        : new this.userModel({
+            ...createUserDto,
+            password: hashedPassword,
+          });
+
+    if (
+      createUserDto.primaryRole !== UserRole.SUPER_ADMIN &&
+      createUserDto.primaryRole !== UserRole.SITE_ADMIN
+    ) {
+      await this.mailService.accountCreationEmail({
+        to: createUserDto.email,
+        name: createUserDto.firstName,
+        password: createUserDto.password!,
+      });
+    }
 
     return newUser.save();
   }
 
+  private getPositionPermissions(position: AdminPosition): Permission[] {
+    const positionPermissions: Record<AdminPosition, Permission[]> = {
+      [AdminPosition.FACILITY_MANAGER]: [
+        { resource: 'properties' as any, actions: ['manage' as any] },
+        { resource: 'maintenance' as any, actions: ['manage' as any] },
+      ],
+      [AdminPosition.SECURITY_HEAD]: [
+        { resource: 'security' as any, actions: ['manage' as any] },
+        { resource: 'users' as any, actions: ['read' as any, 'update' as any] },
+      ],
+      [AdminPosition.FINANCE_MANAGER]: [
+        { resource: 'finances' as any, actions: ['manage' as any] },
+        { resource: 'reports' as any, actions: ['manage' as any] },
+      ],
+      [AdminPosition.TENANT_RELATIONS]: [
+        {
+          resource: 'tenants' as any,
+          actions: ['read' as any, 'update' as any],
+        },
+        {
+          resource: 'maintenance' as any,
+          actions: ['read' as any, 'assign' as any],
+        },
+      ],
+      // Add more position-specific permissions
+      [AdminPosition.MAINTENANCE_SUPERVISOR]: [
+        { resource: 'properties' as any, actions: ['manage' as any] },
+        { resource: 'maintenance' as any, actions: ['manage' as any] },
+      ],
+      [AdminPosition.OPERATIONS_MANAGER]: [
+        { resource: 'operations' as any, actions: ['manage' as any] },
+        { resource: 'maintenance' as any, actions: ['manage' as any] },
+      ],
+      [AdminPosition.PROPERTY_MANAGER]: [
+        { resource: 'properties' as any, actions: ['manage' as any] },
+        { resource: 'maintenance' as any, actions: ['manage' as any] },
+      ],
+      [AdminPosition.CUSTOM]: [],
+    };
+
+    return positionPermissions[position] || [];
+  }
+
   async findAll(): Promise<User[]> {
     return this.userModel.find().exec();
+  }
+
+  async findByRole(role: UserRole): Promise<User[]> {
+    return this.userModel.find({ primaryRole: role }).exec();
+  }
+
+  async findByAdminPosition(position: AdminPosition): Promise<User[]> {
+    return this.userModel.find({ 'adminDetails.position': position }).exec();
+  }
+
+  async findByEstate(estateId: string): Promise<User[]> {
+    return this.userModel.find({ estateId });
   }
 
   async findOne(id: string): Promise<User> {
@@ -50,6 +145,12 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userModel.findOne({ email }).exec();
+  }
+
+  async findSecurity(estateId: string): Promise<User | null> {
+    return this.userModel
+      .findOne({ primaryRole: UserRole.SECURITY, estateId })
+      .exec();
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
@@ -69,7 +170,7 @@ export class UsersService {
     if (!updatedUser) {
       throw new BadRequestException(`Could not update user`);
     }
-    
+
     return updatedUser;
   }
 
@@ -78,5 +179,33 @@ export class UsersService {
     if (result.deletedCount === 0) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
+  }
+
+  async disableTokenGeneration(userId: string) {
+    // Update the user's canCreateToken property to false
+    const updatedUser = await this.userModel.findByIdAndUpdate(
+      userId,
+      { canCreateToken: false },
+      { new: true },
+    );
+
+    return {
+      message: `Token generation disabled for ${updatedUser?.firstName} ${updatedUser?.lastName}`,
+      user: updatedUser,
+    };
+  }
+
+  async enableTokenGeneration(userId: string) {
+    // Update the user's canCreateToken property to true
+    const updatedUser = await this.userModel.findByIdAndUpdate(
+      userId,
+      { canCreateToken: true },
+      { new: true },
+    );
+
+    return {
+      message: `Token generation enabled for ${updatedUser?.firstName} ${updatedUser?.lastName}`,
+      user: updatedUser,
+    };
   }
 }

@@ -5,4 +5,10 @@ export declare class MailService {
     constructor(configService: ConfigService);
     private createDevTransport;
     sendVerificationEmail(to: string, code: string, name: string): Promise<any>;
+    accountCreationEmail(data: {
+        to: string;
+        name: string;
+        password: string;
+    }): Promise<any>;
+    sendPasswordResetEmail(to: string, code: string, name: string): Promise<any>;
 }

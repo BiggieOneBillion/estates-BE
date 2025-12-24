@@ -71,6 +71,50 @@ let MailService = class MailService {
         }
         return info;
     }
+    async accountCreationEmail(data) {
+        const mailOptions = {
+            from: '"Estate Management" <noreply@estatemanagement.com>',
+            to: data.to,
+            subject: 'Account Creation Details',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Hello ${data.name},</h2>
+          <p>Your account has been created successfully.</p>
+          <p>Your password is: ${data.password}</strong></p>
+          <p>Please change your password after your first login.</p>
+          <p>If you are unaware of this account creation, please ignore this email.</p>
+          <p>Best regards,<br>Estate Management Team</p>
+        </div>
+      `,
+        };
+        const info = await this.transporter.sendMail(mailOptions);
+        if (this.configService.get('NODE_ENV') !== 'production') {
+            console.log('Email preview URL:', nodemailer.getTestMessageUrl(info));
+        }
+        return info;
+    }
+    async sendPasswordResetEmail(to, code, name) {
+        const mailOptions = {
+            from: '"Estate Management" <noreply@estatemanagement.com>',
+            to,
+            subject: 'Password Reset Request',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Hello ${name},</h2>
+          <p>We received a request to reset your password. Please use the following code to reset your password:</p>
+          <p>Your password reset code is: <strong>${code}</strong></p>
+          <p>This code will expire in 15 minutes.</p>
+          <p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
+          <p>Best regards,<br>Estate Management Team</p>
+        </div>
+      `,
+        };
+        const info = await this.transporter.sendMail(mailOptions);
+        if (this.configService.get('NODE_ENV') !== 'production') {
+            console.log('Email preview URL:', nodemailer.getTestMessageUrl(info));
+        }
+        return info;
+    }
 };
 exports.MailService = MailService;
 exports.MailService = MailService = __decorate([
