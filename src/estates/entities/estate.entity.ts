@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Mongoose, Schema as MongooseSchema } from 'mongoose';
 
 export enum SubscriptionPlan {
   MONTHLY = 'monthly',
@@ -17,6 +17,14 @@ const now = new Date();
 
 @Schema({ timestamps: true })
 export class Estate extends Document {
+  @Prop({
+    required: true,
+    unique: true,
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'User',
+  })
+  owner?: string;
+
   @Prop({ required: true, trim: true })
   name: string;
 

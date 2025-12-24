@@ -26,8 +26,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    const user = await this.usersService.findOne(payload.sub);
-    if (!user || !user.isActive) {
+    const user = await this.usersService.findByEmail(payload.email);
+    if (!user) {
+      // we can check if user is active to know if user is logged in another device or if user is deactived for other reasons. It depends on what we decide to do.
       throw new UnauthorizedException();
     }
     return {

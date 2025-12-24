@@ -60,7 +60,7 @@ let InitialSeedService = InitialSeedService_1 = class InitialSeedService {
             email: 'estateadmin@example.com',
             password: estateAdminPassword,
             phone: '1234567891',
-            roles: [user_entity_1.UserRole.ESTATE_ADMIN],
+            roles: [user_entity_1.UserRole.ADMIN],
             estate: estate._id,
         });
         const landlordPassword = await bcrypt.hash('landlord123', 10);

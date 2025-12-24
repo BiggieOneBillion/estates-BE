@@ -11,8 +11,8 @@ export declare class AuthService {
     private readonly userModel;
     private mailService;
     constructor(usersService: UsersService, jwtService: JwtService, userModel: Model<User>, mailService: MailService);
-    validateUser(email: string, password: string): Promise<any>;
-    login(loginDto: LoginDto): Promise<any>;
+    validateUser(email: string, password: string, isMobile: boolean): Promise<any>;
+    login(loginDto: LoginDto, isMobile: boolean): Promise<any>;
     validateUserEmailLogin(info: {
         email: string;
         code: string;
@@ -22,7 +22,6 @@ export declare class AuthService {
     }>;
     validateUserRegistering(registerDto: RegisterDto): Promise<any>;
     register(registerDto: RegisterDto): Promise<{
-        user: any;
         access_token: string;
     }>;
     verifyEmail(info: {
@@ -31,5 +30,14 @@ export declare class AuthService {
     }): Promise<{
         message: string;
         status: number;
+    }>;
+    sendPasswordResetOTP(email: string): Promise<{
+        message: string;
+    }>;
+    verifyPasswordResetOTP(email: string, otp: string): Promise<{
+        token: string;
+    }>;
+    resetPassword(resetToken: string, newPassword: string): Promise<{
+        message: string;
     }>;
 }

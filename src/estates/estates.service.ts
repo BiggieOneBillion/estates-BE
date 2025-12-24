@@ -1,26 +1,71 @@
 // src/estates/estates.service.ts
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, ObjectId } from 'mongoose';
 
 import { CreateEstateDto } from './dto/create-estate.dto';
 import { UpdateEstateDto } from './dto/update-estate.dto';
 import { Estate } from './entities/estate.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class EstatesService {
   constructor(
     @InjectModel(Estate.name) private readonly estateModel: Model<Estate>,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
   ) {}
 
-  async create(createEstateDto: CreateEstateDto): Promise<Estate> {
-    const existingEstate = await this.estateModel.findOne({ name: createEstateDto.name });
+  async create(
+    createEstateDto: CreateEstateDto,
+    userId: string,
+  ): Promise<Estate> {
+    // console.log("Estate details---", createEstateDto)
+    const existingEstate = await this.estateModel.findOne({
+      name: createEstateDto.name,
+    });
+
+    // console.log("Existing estate---", existingEstate)
+
     if (existingEstate) {
       throw new ConflictException('Estate name already exists');
     }
 
-    const newEstate = new this.estateModel(createEstateDto);
-    return newEstate.save();
+    // console.log("GO ON BRO", userId)
+
+    const user = await this.userModel.findById({ _id: userId });
+
+    // console.log("THE OWNER ID---", user)
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (!user.isEmailVerified) {
+      throw new ConflictException(
+        'User email not verified yet. Cannot create estate',
+      );
+    }
+
+    if (user.estateId) {
+      throw new ConflictException('User already has an estate');
+    }
+
+    const newEstate = new this.estateModel({
+      ...createEstateDto,
+      owner: userId,
+    });
+
+    await newEstate.save();
+
+    user.estateId = newEstate._id as unknown as ObjectId;
+
+    await user.save();
+
+    return newEstate;
   }
 
   async findAll(): Promise<Estate[]> {
@@ -41,7 +86,9 @@ export class EstatesService {
       throw new NotFoundException(`Estate with ID ${id} not found`);
     }
 
-    const updatedEstate = await this.estateModel.findByIdAndUpdate(id, updateEstateDto, { new: true }).exec()
+    const updatedEstate = await this.estateModel
+      .findByIdAndUpdate(id, updateEstateDto, { new: true })
+      .exec();
 
     if (!updatedEstate) {
       throw new NotFoundException(`Estate with ID ${id} not found`);
