@@ -242,9 +242,11 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.findOne(userId);
     
+    const currentPrefs = user.notificationPreferences || { email: true, push: true, sms: false };
     user.notificationPreferences = {
-      ...user.notificationPreferences,
-      ...preferences,
+      email: preferences.email !== undefined ? preferences.email : currentPrefs.email,
+      push: preferences.push !== undefined ? preferences.push : currentPrefs.push,
+      sms: preferences.sms !== undefined ? preferences.sms : currentPrefs.sms,
     };
 
     await user.save();
