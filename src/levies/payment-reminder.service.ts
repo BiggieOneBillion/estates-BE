@@ -6,6 +6,7 @@ import { UsersService } from '../users/users.service';
 import { MailService } from '../common/services/mail.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PushNotificationService } from '../notifications/push-notification.service';
+import { ObjectId } from 'mongoose';
 
 @Injectable()
 export class PaymentReminderService {
@@ -82,8 +83,8 @@ export class PaymentReminderService {
       for (const user of applicableUsers) {
         // Check if user has already paid
         const hasPaid = await this.paymentsService.hasUserPaidLevy(
-          user._id.toString(),
-          levy._id.toString(),
+          (user._id as ObjectId).toString(),
+          (levy._id as ObjectId).toString(),
         );
 
         if (!hasPaid) {

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
@@ -10,7 +10,7 @@ import { PaystackService } from './paystack.service';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Payment.name, schema: PaymentSchema }]),
-    LeviesModule,
+    forwardRef(() => LeviesModule),
     UsersModule,
   ],
   controllers: [PaymentsController],
