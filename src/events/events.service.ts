@@ -1,33 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Socket } from 'socket.io';
-
-interface SocketClient {
-  userId: string;
-  socket: Socket;
-}
+import { Server } from 'socket.io';
 
 @Injectable()
 export class EventsService {
   private readonly logger = new Logger(EventsService.name);
-  private clients: SocketClient[] = [];
+  private server: Server;
 
-  addClient(userId: string, socket: Socket) {
-    this.clients.push({ userId, socket });
-  }
-
-  removeClient(socket: Socket) {
-    this.clients = this.clients.filter((c) => c.socket.id !== socket.id);
+  setServer(server: Server) {
+    this.server = server;
   }
 
   sendToUser(userId: string, event: string, payload: any) {
+    if (!this.server) {
+      this.logger.warn('Socket server not initialized in EventsService');
+      return;
+    }
     this.logger.debug(`Sending event ${event} to user ${userId}`);
-    this.clients
-      .filter((c) => c.userId.toString() === userId.toString())
-      .forEach((c) => c.socket.emit(event, payload));
+    this.server.to(`user_${userId}`).emit(event, payload);
   }
 
   broadcast(event: string, payload: any) {
+    if (!this.server) {
+      this.logger.warn('Socket server not initialized in EventsService');
+      return;
+    }
     this.logger.debug(`Broadcasting event ${event}`);
-    this.clients.forEach((c) => c.socket.emit(event, payload));
+    this.server.emit(event, payload);
   }
 }

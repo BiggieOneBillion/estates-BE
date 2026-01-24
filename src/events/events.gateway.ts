@@ -1,29 +1,28 @@
 // src/events/events.gateway.ts
-import {
-  WebSocketGateway,
-  SubscribeMessage,
-  MessageBody,
-  ConnectedSocket,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-} from '@nestjs/websockets';
-import { Socket } from 'socket.io';
-import { EventsService } from './events.service';
-import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException, Logger, OnModuleInit } from '@nestjs/common';
+import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody, ConnectedSocket, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
   cors: {
     origin: '*',
   },
 })
-export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect, OnModuleInit {
+  @WebSocketServer()
+  server: Server;
+
+  private readonly logger = new Logger(EventsGateway.name);
+
   constructor(
     private readonly eventsService: EventsService,
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
   ) {}
+
+  onModuleInit() {
+    this.eventsService.setServer(this.server);
+  }
 
   async handleConnection(socket: Socket) {
     try {
@@ -65,18 +64,19 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
       
-      // If all checks pass, add client
-      this.eventsService.addClient(payload.sub, socket);
+      // If all checks pass, join user to their specific room
+      socket.join(`user_${payload.sub}`);
+      this.logger.log(`User ${payload.sub} connected and joined room user_${payload.sub}`);
       socket.emit('connected', { message: `Connected as ${payload.sub}` });
     } catch (error) {
-      console.error('WebSocket connection error:', error.message);
+      this.logger.error(`WebSocket connection error: ${error.message}`);
       socket.emit('error', { message: 'Authentication failed' });
       socket.disconnect();
     }
   }
 
   handleDisconnect(socket: Socket) {
-    this.eventsService.removeClient(socket);
+    this.logger.log(`Client disconnected: ${socket.id}`);
   }
 
   @SubscribeMessage('ping')
