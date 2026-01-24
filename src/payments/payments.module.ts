@@ -5,6 +5,7 @@ import { PaymentsController } from './payments.controller';
 import { Payment, PaymentSchema } from './entities/payment.entity';
 import { LeviesModule } from '../levies/levies.module';
 import { UsersModule } from '../users/users.module';
+import { PaystackService } from './paystack.service';
 
 @Module({
   imports: [
