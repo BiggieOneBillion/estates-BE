@@ -17,6 +17,7 @@ import * as crypto from 'crypto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DomainEvents, TokenEvent } from '../common/events/domain-events';
 import { UsersService } from 'src/users/users.service';
+import { ComplianceService } from '../compliance/compliance.service';
 
 @Injectable()
 export class TokenService {
@@ -26,10 +27,30 @@ export class TokenService {
     @InjectModel(Token.name) private readonly tokenModel: Model<Token>,
     private readonly eventEmitter: EventEmitter2,
     private readonly userService: UsersService,
+    private readonly complianceService: ComplianceService,
   ) {}
 
   async create(createTokenDto: CreateTokenDto, userId: string): Promise<Token> {
-    // Generate a unique token if not provided
+    // 1. Check payment compliance FIRST
+    const compliance = await this.complianceService.checkUserCompliance(userId);
+    
+    if (!compliance.canCreateToken) {
+      throw new ForbiddenException({
+        message: 'Cannot create gate pass token. You have outstanding payments.',
+        statusCode: 403,
+        error: 'Payment Required',
+        outstandingLevies: compliance.outstandingLevies.map(levy => ({
+          id: levy._id,
+          title: levy.title,
+          amount: levy.amount,
+          dueDate: levy.dueDate,
+          description: levy.description,
+        })),
+        totalOutstanding: compliance.totalOutstanding,
+      });
+    }
+
+    // 2. Generate a unique token if not provided
     if (!createTokenDto.token) {
       createTokenDto.token = this.generateUniqueToken();
     }
