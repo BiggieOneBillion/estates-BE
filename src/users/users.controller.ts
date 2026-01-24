@@ -20,7 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 
-import { CreateAdminDetailsDto, CreateUserDto } from './dto/create-user.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -36,6 +36,13 @@ import { Roles } from 'src/auth/decorators/role.decorator';
 import { generateStrongPassword } from 'src/common/utils/util-fn';
 import { UserManagementService } from './user-management.service';
 import { RegisterFcmTokenDto, UpdateNotificationPreferencesDto } from './dto/fcm-token.dto';
+import { CreateLandlordDto } from './dto/create-landlord.dto';
+import { CreateSecurityDto } from './dto/create-security.dto';
+import { CreateTenantDto } from './dto/create-tenant.dto';
+import { CreateAdminDto, CreateAdminDetailsDto } from './dto/create-admin.dto';
+import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdatePermissionsDto } from './dto/update-permissions.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -56,8 +63,8 @@ export class UsersController {
   @Post('create/admin')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async createAdmins(@Body() createUserDto: CreateUserDto, @Request() req) {
-    if (createUserDto.primaryRole !== UserRole.ADMIN) {
+  async createAdmins(@Body() createAdminDto: CreateAdminDto, @Request() req) {
+    if (createAdminDto.primaryRole !== UserRole.ADMIN) {
       throw new ForbiddenException('You can only create an admin user');
     }
     const { userId, roles } = req.user;
@@ -82,11 +89,21 @@ export class UsersController {
         );
       }
     }
-    if (!createUserDto.password) {
-      createUserDto.password = generateStrongPassword();
-    }
-
-    return this.usersService.create(createUserDto, userId);
+    return this.userManagement.createAdmin(
+      userId,
+      {
+        firstName: createAdminDto.firstName,
+        lastName: createAdminDto.lastName,
+        email: createAdminDto.email,
+        phone: createAdminDto.phone,
+        position: createAdminDto.adminDetails!.position,
+        customPositionTitle: createAdminDto.adminDetails?.customPositionTitle,
+        department: createAdminDto.adminDetails?.department,
+        additionalPermissions:
+          createAdminDto.adminDetails?.additionalPermissions,
+      },
+      user.estateId!.toString(),
+    );
   }
 
   @ApiOperation({
@@ -100,18 +117,10 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   async createLandLord(
     @Body()
-    createUserDto: {
-      firstName: string;
-      lastName: string;
-      email: string;
-      phone: string;
-      ownedProperties?: string[];
-      canCreateTenants?: boolean;
-      primaryRole: UserRole;
-    },
+    createLandlordDto: CreateLandlordDto,
     @Request() req,
   ) {
-    if (createUserDto.primaryRole !== UserRole.LANDLORD) {
+    if (createLandlordDto.primaryRole !== UserRole.LANDLORD) {
       throw new ForbiddenException('You can only create a landlord');
     }
     const { userId, roles } = req.user;
@@ -139,11 +148,11 @@ export class UsersController {
     return this.userManagement.createLandlord(
       userId,
       {
-        firstName: createUserDto.firstName,
-        lastName: createUserDto.lastName,
-        email: createUserDto.email,
-        phone: createUserDto.phone,
-        canCreateTenants: createUserDto.canCreateTenants,
+        firstName: createLandlordDto.firstName,
+        lastName: createLandlordDto.lastName,
+        email: createLandlordDto.email,
+        phone: createLandlordDto.phone,
+        canCreateTenants: createLandlordDto.canCreateTenants,
       },
       user.estateId!.toString(),
     );
@@ -158,8 +167,8 @@ export class UsersController {
   @Post('create/tenant')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LANDLORD)
-  async createTenant(@Body() createUserDto: CreateUserDto, @Request() req) {
-    if (createUserDto.primaryRole !== UserRole.TENANT) {
+  async createTenant(@Body() createTenantDto: CreateTenantDto, @Request() req) {
+    if (createTenantDto.primaryRole !== UserRole.TENANT) {
       throw new ForbiddenException('You can only create a tenant');
     }
     const { userId, roles } = req.user;
@@ -167,15 +176,39 @@ export class UsersController {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    if (roles === UserRole.ADMIN || roles === UserRole.LANDLORD) {
-      if (
-        createUserDto.primaryRole !== UserRole.TENANT ||
-        createUserDto.tenantDetails?.landlordId !== userId
-      ) {
-        throw new ForbiddenException('You can only create tenants under you');
+    const targetLandlordId = createTenantDto.tenantDetails.landlordId;
+
+    if (roles === UserRole.LANDLORD || roles === UserRole.ADMIN) {
+      if (targetLandlordId !== userId && roles !== UserRole.SUPER_ADMIN) {
+        // Simple admins can only create for themselves if they are landlords, 
+        // or we need a more complex permission check. 
+        // For now, let's stick to the original restriction or Super Admin power.
+        const canCreateForOthers = roles === UserRole.ADMIN && 
+          user.grantedPermissions?.some(p => p.resource === ResourceType.USERS && p.actions.includes(PermissionAction.CREATE));
+        
+        if (!canCreateForOthers && targetLandlordId !== userId) {
+          throw new ForbiddenException('You can only create tenants under your own account');
+        }
       }
     }
-    return this.usersService.create(createUserDto, userId);
+
+    return this.userManagement.createTenant(
+      targetLandlordId,
+      {
+        firstName: createTenantDto.firstName,
+        lastName: createTenantDto.lastName,
+        email: createTenantDto.email,
+        phone: createTenantDto.phone,
+        propertyUnit: createTenantDto.tenantDetails?.propertyUnit,
+        leaseStartDate: createTenantDto.tenantDetails?.leaseStartDate
+          ? new Date(createTenantDto.tenantDetails.leaseStartDate)
+          : undefined,
+        leaseEndDate: createTenantDto.tenantDetails?.leaseEndDate
+          ? new Date(createTenantDto.tenantDetails.leaseEndDate)
+          : undefined,
+      },
+      user.estateId!.toString(),
+    );
   }
 
   @ApiOperation({
@@ -189,12 +222,7 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   async createSecurity(
     @Body()
-    createUserDto: {
-      firstName: string;
-      lastName: string;
-      email: string;
-      phone: string;
-    },
+    createSecurityDto: CreateSecurityDto,
     @Request() req,
   ) {
     const { userId, roles } = req.user;
@@ -222,10 +250,10 @@ export class UsersController {
     return this.userManagement.createSecurity(
       userId,
       {
-        firstName: createUserDto.firstName,
-        lastName: createUserDto.lastName,
-        email: createUserDto.email,
-        phone: createUserDto.phone,
+        firstName: createSecurityDto.firstName,
+        lastName: createSecurityDto.lastName,
+        email: createSecurityDto.email,
+        phone: createSecurityDto.phone,
       },
       user.estateId!.toString(),
     );
@@ -274,7 +302,11 @@ export class UsersController {
         );
       }
     }
-    return this.usersService.create(createUserDto, userId);
+    return this.userManagement.createUser(
+      userId,
+      createUserDto,
+      user.estateId!.toString(),
+    );
   }
 
   @ApiOperation({
@@ -416,16 +448,11 @@ export class UsersController {
   userUpdateOwnProfile(
     @Param('id') id: string,
     @Body()
-    updateUserDto: {
-      firstName?: string;
-      lastName?: string;
-      phoneNumber?: string;
-      email?: string;
-    },
+    updateProfileDto: UpdateProfileDto,
     @Request() req,
   ) {
     if (id === req.user.userId) {
-      return this.usersService.update(id, updateUserDto);
+      return this.usersService.update(id, updateProfileDto);
     }
     throw new ForbiddenException(
       'You do not have permission to update this resource',
@@ -568,14 +595,7 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN)
   async updatePermissions(
     @Body()
-    body: {
-      permission: {
-        basePermissions?: Permission[];
-        grantedPermissions?: Permission[];
-        deniedPermissions?: Permission[];
-      };
-      id: string;
-    },
+    updatePermissionsDto: UpdatePermissionsDto,
     @Request() req,
   ) {
     const { userId } = req.user;
@@ -594,7 +614,7 @@ export class UsersController {
       throw new NotFoundException('User does not have an estate');
     }
 
-    const userExist = usersFromEstate.find((user) => user.id === body.id);
+    const userExist = usersFromEstate.find((user) => user.id === updatePermissionsDto.id);
 
     if (!userExist) {
       throw new NotFoundException(
@@ -602,7 +622,7 @@ export class UsersController {
       );
     }
 
-    return this.userManagement.updateUserPermissions(body.id, body.permission);
+    return this.userManagement.updateUserPermissions(updatePermissionsDto.id, updatePermissionsDto.permission);
   }
 
   @ApiOperation({
