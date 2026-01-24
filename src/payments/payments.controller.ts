@@ -21,6 +21,7 @@ import { UsersService } from '../users/users.service';
 import { InitializePaymentDto } from './dto/initialize-payment.dto';
 import { PaystackService } from './paystack.service';
 import { LeviesService } from '../levies/levies.service';
+import { ObjectId } from 'mongoose';
 
 @ApiTags('Payments')
 @ApiBearerAuth()
@@ -115,7 +116,7 @@ export class PaymentsController {
     const user = await this.usersService.findOne(req.user.userId);
     const levy = await this.leviesService.findOne(
       initializeDto.levyId,
-      user.estateId.toString(),
+      user?.estateId!.toString(),
     );
 
     // Create payment record
@@ -133,11 +134,11 @@ export class PaymentsController {
     const paystackData = await this.paystackService.initializePayment({
       email: user.email,
       amount: payment.amount,
-      reference: payment._id.toString(),
+      reference: (payment._id as ObjectId).toString(),
       metadata: {
-        userId: user._id.toString(),
-        levyId: levy._id.toString(),
-        paymentId: payment._id.toString(),
+        userId: (user._id as ObjectId).toString(),
+        levyId: (levy._id as ObjectId).toString(),
+        paymentId: (payment._id as ObjectId).toString(),
         levyTitle: levy.title,
       },
     });
@@ -182,7 +183,7 @@ export class PaymentsController {
 
         // Auto-verify payment from Paystack
         await this.paymentsService.verifyPayment(
-          payment._id.toString(),
+          (payment._id as ObjectId).toString(),
           { notes: 'Auto-verified from Paystack' },
           'system',
         );
