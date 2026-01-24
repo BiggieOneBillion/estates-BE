@@ -35,6 +35,7 @@ import {
 import { Roles } from 'src/auth/decorators/role.decorator';
 import { generateStrongPassword } from 'src/common/utils/util-fn';
 import { UserManagementService } from './user-management.service';
+import { RegisterFcmTokenDto, UpdateNotificationPreferencesDto } from './dto/fcm-token.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -666,6 +667,59 @@ export class UsersController {
     }
 
     return this.usersService.enableTokenGeneration(id);
+  }
+
+  @ApiOperation({
+    summary: 'Register FCM token',
+    description: 'Register a Firebase Cloud Messaging token for push notifications',
+  })
+  @ApiResponse({ status: 200, description: 'FCM token registered successfully' })
+  @Post('fcm-token')
+  async registerFcmToken(
+    @Body() registerFcmTokenDto: RegisterFcmTokenDto,
+    @Request() req,
+  ) {
+    const userId = req.user.userId;
+    return this.usersService.registerFcmToken(userId, registerFcmTokenDto.fcmToken);
+  }
+
+  @ApiOperation({
+    summary: 'Remove FCM token',
+    description: 'Remove a Firebase Cloud Messaging token (e.g., on logout)',
+  })
+  @ApiResponse({ status: 200, description: 'FCM token removed successfully' })
+  @Delete('fcm-token/:token')
+  async removeFcmToken(@Param('token') token: string, @Request() req) {
+    const userId = req.user.userId;
+    return this.usersService.removeFcmToken(userId, token);
+  }
+
+  @ApiOperation({
+    summary: 'Update notification preferences',
+    description: 'Update user notification channel preferences',
+  })
+  @ApiResponse({ status: 200, description: 'Notification preferences updated successfully' })
+  @Patch('notification-preferences')
+  async updateNotificationPreferences(
+    @Body() updatePreferencesDto: UpdateNotificationPreferencesDto,
+    @Request() req,
+  ) {
+    const userId = req.user.userId;
+    return this.usersService.updateNotificationPreferences(userId, updatePreferencesDto);
+  }
+
+  @ApiOperation({
+    summary: 'Get notification preferences',
+    description: 'Get current user notification preferences',
+  })
+  @ApiResponse({ status: 200, description: 'Notification preferences retrieved successfully' })
+  @Get('notification-preferences/me')
+  async getNotificationPreferences(@Request() req) {
+    const userId = req.user.userId;
+    const user = await this.usersService.findOne(userId);
+    return {
+      preferences: user.notificationPreferences || { email: true, push: true, sms: false },
+    };
   }
 }
 
