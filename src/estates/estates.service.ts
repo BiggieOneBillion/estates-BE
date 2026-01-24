@@ -1,11 +1,11 @@
-// src/estates/estates.service.ts
 import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, ObjectId } from 'mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { Connection, Model, ObjectId } from 'mongoose';
 
 import { CreateEstateDto } from './dto/create-estate.dto';
 import { UpdateEstateDto } from './dto/update-estate.dto';
@@ -14,58 +14,64 @@ import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class EstatesService {
+  private readonly logger = new Logger(EstatesService.name);
+
   constructor(
     @InjectModel(Estate.name) private readonly estateModel: Model<Estate>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
   async create(
     createEstateDto: CreateEstateDto,
     userId: string,
   ): Promise<Estate> {
-    // console.log("Estate details---", createEstateDto)
-    const existingEstate = await this.estateModel.findOne({
-      name: createEstateDto.name,
-    });
+    const session = await this.connection.startSession();
+    session.startTransaction();
 
-    // console.log("Existing estate---", existingEstate)
+    try {
+      const existingEstate = await this.estateModel
+        .findOne({ name: createEstateDto.name })
+        .session(session);
 
-    if (existingEstate) {
-      throw new ConflictException('Estate name already exists');
+      if (existingEstate) {
+        throw new ConflictException('Estate name already exists');
+      }
+
+      const user = await this.userModel.findById(userId).session(session);
+
+      if (!user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
+      if (!user.isEmailVerified) {
+        throw new ConflictException('User email not verified yet. Cannot create estate');
+      }
+
+      if (user.estateId) {
+        throw new ConflictException('User already has an estate');
+      }
+
+      const newEstate = new this.estateModel({
+        ...createEstateDto,
+        owner: userId,
+      });
+
+      await newEstate.save({ session });
+
+      user.estateId = newEstate._id as unknown as ObjectId;
+      await user.save({ session });
+
+      await session.commitTransaction();
+      this.logger.log(`Estate "${newEstate.name}" created successfully for user ${userId}`);
+      return newEstate;
+    } catch (error) {
+      await session.abortTransaction();
+      this.logger.error(`Failed to create estate: ${error.message}`);
+      throw error;
+    } finally {
+      session.endSession();
     }
-
-    // console.log("GO ON BRO", userId)
-
-    const user = await this.userModel.findById({ _id: userId });
-
-    // console.log("THE OWNER ID---", user)
-
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
-    }
-
-    if (!user.isEmailVerified) {
-      throw new ConflictException(
-        'User email not verified yet. Cannot create estate',
-      );
-    }
-
-    if (user.estateId) {
-      throw new ConflictException('User already has an estate');
-    }
-
-    const newEstate = new this.estateModel({
-      ...createEstateDto,
-      owner: userId,
-    });
-
-    await newEstate.save();
-
-    user.estateId = newEstate._id as unknown as ObjectId;
-
-    await user.save();
-
-    return newEstate;
   }
 
   async findAll(): Promise<Estate[]> {
