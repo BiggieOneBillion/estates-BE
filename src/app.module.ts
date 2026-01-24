@@ -25,6 +25,9 @@ import { TokenModule } from './gatePassToken/token.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventsModule } from './events/events.module';
+import { LeviesModule } from './levies/levies.module';
+import { PaymentsModule } from './payments/payments.module';
+import { ComplianceModule } from './compliance/compliance.module';
 
 @Module({
   imports: [
@@ -58,6 +61,9 @@ import { EventsModule } from './events/events.module';
     CloudinaryModule,
     NotificationsModule,
     EventsModule,
+    LeviesModule,
+    PaymentsModule,
+    ComplianceModule,
   ],
   controllers: [AppController],
   providers: [AppService, InitialSeedService, MailService],
