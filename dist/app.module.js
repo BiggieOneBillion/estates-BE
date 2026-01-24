@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
+const event_emitter_1 = require("@nestjs/event-emitter");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const auth_module_1 = require("./auth/auth.module");
@@ -52,6 +53,7 @@ exports.AppModule = AppModule = __decorate([
                 isGlobal: true,
                 envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
             }),
+            event_emitter_1.EventEmitterModule.forRoot(),
             mongoose_1.MongooseModule.forRootAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],

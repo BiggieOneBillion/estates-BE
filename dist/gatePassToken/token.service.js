@@ -19,20 +19,17 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const token_entity_1 = require("./entities/token.entity");
 const crypto = require("crypto");
-const notifications_service_1 = require("../notifications/notifications.service");
-const notification_entity_1 = require("../notifications/entities/notification.entity");
-const events_service_1 = require("../events/events.service");
+const event_emitter_1 = require("@nestjs/event-emitter");
+const domain_events_1 = require("../common/events/domain-events");
 const users_service_1 = require("../users/users.service");
 let TokenService = TokenService_1 = class TokenService {
     tokenModel;
-    notificationsService;
-    eventsService;
+    eventEmitter;
     userService;
     logger = new common_1.Logger(TokenService_1.name);
-    constructor(tokenModel, notificationsService, eventsService, userService) {
+    constructor(tokenModel, eventEmitter, userService) {
         this.tokenModel = tokenModel;
-        this.notificationsService = notificationsService;
-        this.eventsService = eventsService;
+        this.eventEmitter = eventEmitter;
         this.userService = userService;
     }
     async create(createTokenDto, userId) {
@@ -69,19 +66,7 @@ let TokenService = TokenService_1 = class TokenService {
         }
         const user = securityUser.id;
         const savedToken = await token.save();
-        await this.notificationsService.createTokenNotification(token.user.toString(), token._id.toString(), token.token, notification_entity_1.NotificationType.VISITOR_VERIFIED);
-        this.eventsService.sendToUser(token.user.toString(), 'visitor_verified', {
-            tokenId: token._id,
-            token: token.token,
-            type: notification_entity_1.NotificationType.VISITOR_VERIFIED,
-            timestamp: new Date(),
-        });
-        this.eventsService.sendToUser(user, 'visitor_verified', {
-            tokenId: token._id,
-            token: token.token,
-            type: notification_entity_1.NotificationType.VISITOR_VERIFIED,
-            timestamp: new Date(),
-        });
+        this.eventEmitter.emit(domain_events_1.DomainEvents.VISITOR_VERIFIED, new domain_events_1.TokenEvent(token.user.toString(), token._id.toString(), token.token, { securityId: user }));
         return savedToken;
     }
     async findAll() {
@@ -130,34 +115,18 @@ let TokenService = TokenService_1 = class TokenService {
         const tokenString = token.token;
         const tokenOwnerId = token.user.toString();
         const securityId = securityPersonnel.id.toString();
-        const timestamp = new Date();
-        const createEventPayload = (type) => ({
-            tokenId: token._id,
-            token: tokenString,
-            type,
-            timestamp,
-        });
         if (updateTokenDto.hasUserVerifiedVisitor &&
             updateTokenDto.hasUserVerifiedVisitor ===
                 token_entity_1.hasUserVerifiedVisitorStatus.COMPLETED) {
-            await this.notificationsService.createTokenNotification(tokenOwnerId, tokenId, tokenString, notification_entity_1.NotificationType.VISITOR_VERIFIED, false);
-            this.eventsService.sendToUser(securityId, 'visitor_verified', createEventPayload(notification_entity_1.NotificationType.VISITOR_VERIFIED));
+            this.eventEmitter.emit(domain_events_1.DomainEvents.VISITOR_VERIFIED, new domain_events_1.TokenEvent(tokenOwnerId, tokenId, tokenString, { securityId }));
         }
         else if (updateTokenDto.hasUserVerifiedVisitor &&
             updateTokenDto.hasUserVerifiedVisitor ===
                 token_entity_1.hasUserVerifiedVisitorStatus.FAILED) {
-            await Promise.all([
-                this.notificationsService.createTokenNotification(tokenOwnerId, tokenId, tokenString, notification_entity_1.NotificationType.TOKEN_UPDATED, true),
-                this.notificationsService.createTokenNotification(securityId, tokenId, tokenString, notification_entity_1.NotificationType.TOKEN_UPDATED, true),
-            ]);
-            this.eventsService.sendToUser(securityId, 'visitor_rejected', createEventPayload(notification_entity_1.NotificationType.TOKEN_UPDATED));
+            this.eventEmitter.emit(domain_events_1.DomainEvents.VISITOR_REJECTED, new domain_events_1.TokenEvent(tokenOwnerId, tokenId, tokenString, { securityId }));
         }
         else {
-            const notificationType = isImage
-                ? notification_entity_1.NotificationType.VERIFY_VISTOR
-                : notification_entity_1.NotificationType.TOKEN_UPDATED;
-            await this.notificationsService.createTokenNotification(tokenOwnerId, tokenId, tokenString, notificationType, true);
-            this.eventsService.sendToUser(tokenOwnerId, 'user_updated', createEventPayload(notificationType));
+            this.eventEmitter.emit(domain_events_1.DomainEvents.TOKEN_UPDATED, new domain_events_1.TokenEvent(tokenOwnerId, tokenId, tokenString, { isImage }));
         }
         return updatedToken;
     }
@@ -177,13 +146,7 @@ let TokenService = TokenService_1 = class TokenService {
         token.usedAt = new Date();
         token.verifiedBy = securityUserId;
         const savedToken = await token.save();
-        await this.notificationsService.createTokenNotification(token.user.toString(), token._id.toString(), token.token, notification_entity_1.NotificationType.TOKEN_VERIFIED);
-        this.eventsService.sendToUser(token.user.toString(), 'token_verified', {
-            tokenId: token._id,
-            token: token.token,
-            type: notification_entity_1.NotificationType.TOKEN_VERIFIED,
-            timestamp: new Date(),
-        });
+        this.eventEmitter.emit(domain_events_1.DomainEvents.TOKEN_VERIFIED, new domain_events_1.TokenEvent(token.user.toString(), token._id.toString(), token.token));
         return savedToken;
     }
     async remove(id) {
@@ -201,8 +164,7 @@ exports.TokenService = TokenService = TokenService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(token_entity_1.Token.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        notifications_service_1.NotificationsService,
-        events_service_1.EventsService,
+        event_emitter_1.EventEmitter2,
         users_service_1.UsersService])
 ], TokenService);
 //# sourceMappingURL=token.service.js.map
