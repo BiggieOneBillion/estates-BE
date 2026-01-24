@@ -39,7 +39,6 @@ let AuthController = class AuthController {
         return this.authService.register(registerDto);
     }
     async VerifyRegistrationEmail(body) {
-        console.log(body.data);
         return this.authService.verifyEmail(body.data);
     }
     getProfile(req) {
@@ -72,10 +71,12 @@ let AuthController = class AuthController {
 };
 exports.AuthController = AuthController;
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: 'User login' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'User login',
+        description: 'Authenticates a user and returns a JWT token.',
+    }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Login successful' }),
     (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid credentials' }),
-    (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
@@ -84,13 +85,15 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: 'User login email verification' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Login email verification',
+        description: 'Verifies the OTP sent to the user email during login.',
+    }),
     (0, swagger_1.ApiResponse)({
         status: 200,
-        description: 'login email verification successful',
+        description: 'Login email verification successful',
     }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid credentials' }),
-    (0, swagger_1.ApiTags)('Authentication'),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid or expired OTP' }),
     (0, common_1.Post)('login/verify'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -98,10 +101,12 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "VerifyLoginEmail", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: 'User Registration' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Registration successful' }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid credentials' }),
-    (0, swagger_1.ApiTags)('Authentication'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'User registration',
+        description: 'Registers a new user and sends a verification email.',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Registration successful' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Bad request or user already exists' }),
     (0, common_1.Post)('register'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -109,10 +114,13 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "Register", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: 'User Email Verification' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Email Verification successful' }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid credentials' }),
-    (0, swagger_1.ApiTags)('Authentication'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Verify registration email',
+        description: 'Verifies the email address using the code sent during registration.',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Email verification successful' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid or expired verification code' }),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Post)('verify-email'),
     __param(0, (0, common_1.Body)()),
@@ -121,11 +129,13 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "VerifyRegistrationEmail", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: 'Get user profile' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Get current user profile',
+        description: 'Retrieves the profile information of the currently authenticated user.',
+    }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Profile retrieved successfully' }),
     (0, swagger_1.ApiResponse)({ status: 401, description: 'Unauthorized' }),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('profile'),
     __param(0, (0, common_1.Request)()),
@@ -134,10 +144,12 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "getProfile", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: 'Request password reset' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Request password reset',
+        description: 'Sends a password reset code to the provided email address.',
+    }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Password reset OTP sent' }),
-    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid email' }),
-    (0, swagger_1.ApiTags)('Authentication'),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'User not found' }),
     (0, common_1.Post)('forgot-password'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -145,10 +157,12 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "requestPasswordReset", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: 'Verify password reset OTP' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Verify password reset OTP',
+        description: 'Verifies the OTP for password reset and sets a temporary reset token cookie.',
+    }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'OTP verified successfully' }),
-    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid OTP' }),
-    (0, swagger_1.ApiTags)('Authentication'),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid or expired OTP' }),
     (0, common_1.Post)('verify-reset-otp'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Res)({ passthrough: true })),
@@ -157,10 +171,12 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verifyPasswordResetOTP", null);
 __decorate([
-    (0, swagger_1.ApiOperation)({ summary: 'Reset password' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Reset password',
+        description: 'Updates the user password using the verification token from the cookie.',
+    }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Password reset successful' }),
-    (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid or expired token' }),
-    (0, swagger_1.ApiTags)('Authentication'),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Reset token is missing or expired' }),
     (0, common_1.Post)('reset-password'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
@@ -170,6 +186,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "resetPassword", null);
 exports.AuthController = AuthController = __decorate([
+    (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])
 ], AuthController);

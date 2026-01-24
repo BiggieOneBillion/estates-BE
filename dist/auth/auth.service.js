@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var AuthService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
@@ -21,11 +22,12 @@ const mongoose_1 = require("@nestjs/mongoose");
 const user_entity_1 = require("../users/entities/user.entity");
 const mongoose_2 = require("mongoose");
 const mail_service_1 = require("../common/services/mail.service");
-let AuthService = class AuthService {
+let AuthService = AuthService_1 = class AuthService {
     usersService;
     jwtService;
     userModel;
     mailService;
+    logger = new common_1.Logger(AuthService_1.name);
     constructor(usersService, jwtService, userModel, mailService) {
         this.usersService = usersService;
         this.jwtService = jwtService;
@@ -38,8 +40,8 @@ let AuthService = class AuthService {
             throw new common_1.BadRequestException('Invalid credentials');
         }
         const isPasswordValid = await bcrypt.compare(password, user.password);
-        console.log('Password Valid', isPasswordValid);
         if (!isPasswordValid) {
+            this.logger.warn(`Failed login attempt for email: ${email}`);
             throw new common_1.BadRequestException('Invalid credentials');
         }
         if (!isMobile && user.primaryRole !== user_entity_1.UserRole.SUPER_ADMIN) {
@@ -82,8 +84,6 @@ let AuthService = class AuthService {
     }
     async validateUserEmailLogin(info) {
         const { email, code } = info;
-        console.log('Email:', email);
-        console.log('Code:', code);
         const user = await this.usersService.findByEmail(email);
         if (!user) {
             throw new common_1.BadRequestException('Invalid credentials');
@@ -119,7 +119,7 @@ let AuthService = class AuthService {
             verificationToken,
         });
         const savedUser = await newUser.save();
-        console.log('Registration verification token', verificationToken);
+        this.logger.log(`New user registered: ${savedUser.email}`);
         const resObj = {
             firstName: savedUser.firstName,
             lastName: savedUser.lastName,
@@ -230,7 +230,7 @@ let AuthService = class AuthService {
     }
 };
 exports.AuthService = AuthService;
-exports.AuthService = AuthService = __decorate([
+exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(2, (0, mongoose_1.InjectModel)(user_entity_1.User.name)),
     __metadata("design:paramtypes", [users_service_1.UsersService,

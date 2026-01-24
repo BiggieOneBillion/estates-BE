@@ -256,6 +256,7 @@ __decorate([
 ], TokenController.prototype, "remove", null);
 exports.TokenController = TokenController = __decorate([
     (0, swagger_1.ApiTags)('Gate Pass Tokens'),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('tokens'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     __metadata("design:paramtypes", [token_service_1.TokenService,

@@ -10,6 +10,7 @@ export declare class TokenService {
     private readonly notificationsService;
     private readonly eventsService;
     private readonly userService;
+    private readonly logger;
     constructor(tokenModel: Model<Token>, notificationsService: NotificationsService, eventsService: EventsService, userService: UsersService);
     create(createTokenDto: CreateTokenDto, userId: string): Promise<Token>;
     verifyVisitorToken(tokenString: string, userId: string): Promise<Token>;
