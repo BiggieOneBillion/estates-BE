@@ -29,6 +29,8 @@ import { Roles } from 'src/auth/decorators/role.decorator';
 import { generateStrongPassword } from 'src/common/utils/util-fn';
 import { UserManagementService } from './user-management.service';
 
+@ApiTags('Users')
+@ApiBearerAuth()
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
@@ -37,11 +39,12 @@ export class UsersController {
     private readonly userManagement: UserManagementService,
   ) {}
 
-  /**
-   * Creates an admin user.
-   * Only super admins and admins with the necessary permissions can create admin users.
-   * Throws a ForbiddenException if the user does not have permission.
-   */
+  @ApiOperation({
+    summary: 'Create an admin user',
+    description: 'Allows Super Admins or Admins with CREATE_ADMINS permission to create a new admin.',
+  })
+  @ApiResponse({ status: 201, description: 'Admin created successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/admin')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -72,18 +75,18 @@ export class UsersController {
       }
     }
     if (!createUserDto.password) {
-      // generate a random password that has uppercase letters, lowercase letters, numbers, symbol like @%&, and 8 character length
       createUserDto.password = generateStrongPassword();
     }
 
     return this.usersService.create(createUserDto, userId);
   }
 
-  /**
-   * Creates a landlord user.
-   * Only super admins and admins with the necessary permissions can create landlord users.
-   * Throws a ForbiddenException if the user does not have permission.
-   */
+  @ApiOperation({
+    summary: 'Create a landlord user',
+    description: 'Allows Super Admins or Admins with CREATE_LANDLORDS permission to create a new landlord.',
+  })
+  @ApiResponse({ status: 201, description: 'Landlord created successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/landlord')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -125,7 +128,6 @@ export class UsersController {
         );
       }
     }
-    // return this.usersService.create(createUserDto, userId);
     return this.userManagement.createLandlord(
       userId,
       {
@@ -139,11 +141,12 @@ export class UsersController {
     );
   }
 
-  /**
-   * Creates a tenant user.
-   * Only super admins, admins, and landlords with the necessary permissions can create tenant users.
-   * Throws a ForbiddenException if the user does not have permission.
-   */
+  @ApiOperation({
+    summary: 'Create a tenant user',
+    description: 'Allows Super Admins, Admins, or Landlords to create a new tenant under them.',
+  })
+  @ApiResponse({ status: 201, description: 'Tenant created successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/tenant')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LANDLORD)
@@ -167,6 +170,12 @@ export class UsersController {
     return this.usersService.create(createUserDto, userId);
   }
 
+  @ApiOperation({
+    summary: 'Create a security user',
+    description: 'Allows Super Admins or Admins with CREATE_USERS permission to create a new security user.',
+  })
+  @ApiResponse({ status: 201, description: 'Security user created successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/security')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -180,17 +189,6 @@ export class UsersController {
     },
     @Request() req,
   ) {
-    // if (
-    //   createUserDto.primaryRole === UserRole.LANDLORD ||
-    //   createUserDto.primaryRole === UserRole.TENANT ||
-    //   createUserDto.primaryRole === UserRole.ADMIN ||
-    //   createUserDto.primaryRole === UserRole.SUPER_ADMIN ||
-    //   createUserDto.primaryRole === UserRole.SITE_ADMIN
-    // ) {
-    //   throw new ForbiddenException(
-    //     'You can only create a users that are not admins, landlord, or tenant',
-    //   );
-    // }
     const { userId, roles } = req.user;
     const user = await this.usersService.findOne(userId);
     if (!user) {
@@ -225,11 +223,12 @@ export class UsersController {
     );
   }
 
-  /**
-   * Creates a general user.
-   * Only super admins and admins with the necessary permissions can create general users.
-   * Throws a ForbiddenException if the user does not have permission.
-   */
+  @ApiOperation({
+    summary: 'Create a general user',
+    description: 'Allows Super Admins or Admins with CREATE_USERS permission to create a general user (non-admin, non-landlord, non-tenant).',
+  })
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/user')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -270,10 +269,11 @@ export class UsersController {
     return this.usersService.create(createUserDto, userId);
   }
 
-  /**
-   * Retrieves all users.
-   * Only super admins and admins can access this endpoint.
-   */
+  @ApiOperation({
+    summary: 'Get all users in the estate',
+    description: 'Allows Super Admins or Admins with READ_USERS permission to view all users in their estate.',
+  })
+  @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   @Get('all')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -310,14 +310,13 @@ export class UsersController {
     return this.usersService.findByEstate(user.estateId!.toString());
   }
 
-  /**
-   * Retrieves a specific user by ID.
-   * Allows users to access their own profile.
-   * Throws a ForbiddenException if the user does not have permission.
-   */
+  @ApiOperation({
+    summary: 'Get user by ID',
+    description: 'Allows users to view their own profile, or Admins/Super Admins to view users in their estate.',
+  })
+  @ApiResponse({ status: 200, description: 'User retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   @Get(':id')
-  // @UseGuards(RolesGuard)
-  // @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   async findOne(@Param('id') id: string, @Request() req) {
     if (
       id === req.user.userId ||
@@ -335,9 +334,7 @@ export class UsersController {
         }
       }
 
-      // check if user exist in super-admin estate, as super-admin cannot access another super-admin estate users
       if (req.user.roles === UserRole.SUPER_ADMIN) {
-        //  GET USERS IN SUPER ADMIN ESTATE
         const user = await this.usersService.findOne(req.user.userId);
 
         if (!user) {
@@ -347,7 +344,6 @@ export class UsersController {
         const usersFromEstate = await this.usersService.findByEstate(
           user.estateId!.toString(),
         );
-        // check if user exist in estate
         const userExist = usersFromEstate.find((user) => user.id === id);
 
         if (!userExist) {
@@ -366,11 +362,11 @@ export class UsersController {
     );
   }
 
-  /**
-   * Updates a specific user by ID.
-   * Allows super_admin and admin  to update their own profile and others profile.
-   * Throws a ForbiddenException if the user does not have permission.
-   */
+  @ApiOperation({
+    summary: 'Full update of a user',
+    description: 'Allows Super Admins or Admins with UPDATE_USERS permission to perform a full update on a user.',
+  })
+  @ApiResponse({ status: 200, description: 'User updated successfully' })
   @Patch('full-update/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -403,11 +399,11 @@ export class UsersController {
     );
   }
 
-  /**
-   * Updates a specific user by ID.
-   * Allows users to update their own profile.
-   * Throws a ForbiddenException if the user does not have permission.
-   */
+  @ApiOperation({
+    summary: 'Update own profile',
+    description: 'Allows any authenticated user to update their own basic profile information.',
+  })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   @Patch(':id')
   userUpdateOwnProfile(
     @Param('id') id: string,
@@ -428,16 +424,11 @@ export class UsersController {
     );
   }
 
-  /**
-   * Edits a user's details by ID.
-   * This is a comprehensive update endpoint.
-   * Only accessible by SUPER_ADMIN or ADMIN with appropriate permissions.
-   *
-   * @param id The ID of the user to be edited.
-   * @param updateUserDto The data for updating the user.
-   * @param req The incoming request object.
-   * @returns The updated user document.
-   */
+  @ApiOperation({
+    summary: 'Edit user details',
+    description: 'Comprehensive update endpoint for Super Admins/Admins within their estate.',
+  })
+  @ApiResponse({ status: 200, description: 'User edited successfully' })
   @Put(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -458,14 +449,12 @@ export class UsersController {
       throw new NotFoundException(`User with ID ${id} not found.`);
     }
 
-    // Both SUPER_ADMIN and ADMIN can only update users within their own estate
     if (requester.estateId?.toString() !== userToUpdate.estateId?.toString()) {
       throw new ForbiddenException(
         'Cannot update users from a different estate.',
       );
     }
 
-    // Admin role requires specific permission to update other users
     if (
       roles === UserRole.ADMIN &&
       id !== userId &&
@@ -483,29 +472,19 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
+  @ApiOperation({
+    summary: 'Promote user to Admin',
+    description: 'Allows Super Admins to promote a landlord to an admin role.',
+  })
+  @ApiResponse({ status: 200, description: 'User promoted successfully' })
   @Patch('update/to-admin/:id')
   @UseGuards(RolesGuard)
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    // UserRole.ADMIN
-  )
+  @Roles(UserRole.SUPER_ADMIN)
   async updateUserToAdmin(
     @Param('id') id: string,
     @Request() req,
     @Body() body: CreateAdminDetailsDto,
   ) {
-    // if (req.user.roles === UserRole.ADMIN) {
-    //   const requiredPermission = req.user.grantedPermissions!.filter(
-    //     (permission) =>
-    //       permission.actions.includes(PermissionAction.UPDATE) &&
-    //       permission.resource === ResourceType.USERS,
-    //   );
-    //   if (requiredPermission.length === 0) {
-    //     throw new ForbiddenException(
-    //       'You do not have permission to update users',
-    //     );
-    //   }
-    // }
     const user = await this.usersService.findOne(req.user.userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -513,7 +492,6 @@ export class UsersController {
     if (!user.estateId) {
       throw new NotFoundException('User does not have an estate');
     }
-    // check if user exist in estate
     const userInEstate = await this.usersService.findByEstate(
       user.estateId!.toString(),
     );
@@ -529,12 +507,14 @@ export class UsersController {
     return this.userManagement.makeLandlordAdmin(req.user.userId, id, body);
   }
 
+  @ApiOperation({
+    summary: 'Demote Admin to Landlord',
+    description: 'Allows Super Admins to remove admin role from a user.',
+  })
+  @ApiResponse({ status: 200, description: 'User demoted successfully' })
   @Patch('update/demote-admin/:id')
   @UseGuards(RolesGuard)
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    // UserRole.ADMIN
-  )
+  @Roles(UserRole.SUPER_ADMIN)
   async demoteAdminToLandlord(@Param('id') id: string, @Request() req) {
     const user = await this.usersService.findOne(req.user.userId);
     if (!user) {
@@ -543,7 +523,6 @@ export class UsersController {
     if (!user.estateId) {
       throw new NotFoundException('User does not have an estate');
     }
-    // check if user exist in estate
     const userInEstate = await this.usersService.findByEstate(
       user.estateId!.toString(),
     );
@@ -559,10 +538,11 @@ export class UsersController {
     return this.userManagement.removeAdminRole(req.user.userId, id);
   }
 
-  /**
-   * Deletes a specific user by ID.
-   * Only super admins can access this endpoint.
-   */
+  @ApiOperation({
+    summary: 'Delete a user',
+    description: 'Allows Super Admins to permanently delete a user account.',
+  })
+  @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
@@ -570,6 +550,11 @@ export class UsersController {
     return this.usersService.remove(id);
   }
 
+  @ApiOperation({
+    summary: 'Update user permissions',
+    description: 'Allows Super Admins to granularly update user permissions.',
+  })
+  @ApiResponse({ status: 200, description: 'Permissions updated successfully' })
   @Post('update/permission/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
@@ -581,7 +566,7 @@ export class UsersController {
         grantedPermissions?: Permission[];
         deniedPermissions?: Permission[];
       };
-      id: string; // this is the user id, id of the person receiving the update
+      id: string;
     },
     @Request() req,
   ) {
@@ -601,7 +586,6 @@ export class UsersController {
       throw new NotFoundException('User does not have an estate');
     }
 
-    // check if user exist in estate
     const userExist = usersFromEstate.find((user) => user.id === body.id);
 
     if (!userExist) {
@@ -613,6 +597,11 @@ export class UsersController {
     return this.userManagement.updateUserPermissions(body.id, body.permission);
   }
 
+  @ApiOperation({
+    summary: 'Disable token generation',
+    description: 'Prevents a user from generating gate pass tokens.',
+  })
+  @ApiResponse({ status: 200, description: 'Token generation disabled' })
   @Patch('disable-token-generation/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
@@ -626,13 +615,11 @@ export class UsersController {
       throw new NotFoundException('Super admin does not have an estate');
     }
 
-    // Find the target user
     const targetUser = await this.usersService.findOne(id);
     if (!targetUser) {
       throw new NotFoundException('Target user not found');
     }
 
-    // Check if the target user belongs to the same estate as the super admin
     if (targetUser.estateId?.toString() !== superAdmin.estateId.toString()) {
       throw new ForbiddenException(
         'Cannot disable token generation for users from different estates',
@@ -642,6 +629,11 @@ export class UsersController {
     return this.usersService.disableTokenGeneration(id);
   }
 
+  @ApiOperation({
+    summary: 'Enable token generation',
+    description: 'Allows a user to generate gate pass tokens.',
+  })
+  @ApiResponse({ status: 200, description: 'Token generation enabled' })
   @Patch('enable-token-generation/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
@@ -655,13 +647,11 @@ export class UsersController {
       throw new NotFoundException('Super admin does not have an estate');
     }
 
-    // Find the target user
     const targetUser = await this.usersService.findOne(id);
     if (!targetUser) {
       throw new NotFoundException('Target user not found');
     }
 
-    // Check if the target user belongs to the same estate as the super admin
     if (targetUser.estateId?.toString() !== superAdmin.estateId.toString()) {
       throw new ForbiddenException(
         'Cannot enable token generation for users from different estates',
@@ -671,3 +661,4 @@ export class UsersController {
     return this.usersService.enableTokenGeneration(id);
   }
 }
+
