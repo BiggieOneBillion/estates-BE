@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var TokenService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TokenService = void 0;
 const common_1 = require("@nestjs/common");
@@ -22,11 +23,12 @@ const notifications_service_1 = require("../notifications/notifications.service"
 const notification_entity_1 = require("../notifications/entities/notification.entity");
 const events_service_1 = require("../events/events.service");
 const users_service_1 = require("../users/users.service");
-let TokenService = class TokenService {
+let TokenService = TokenService_1 = class TokenService {
     tokenModel;
     notificationsService;
     eventsService;
     userService;
+    logger = new common_1.Logger(TokenService_1.name);
     constructor(tokenModel, notificationsService, eventsService, userService) {
         this.tokenModel = tokenModel;
         this.notificationsService = notificationsService;
@@ -195,7 +197,7 @@ let TokenService = class TokenService {
     }
 };
 exports.TokenService = TokenService;
-exports.TokenService = TokenService = __decorate([
+exports.TokenService = TokenService = TokenService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(token_entity_1.Token.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,

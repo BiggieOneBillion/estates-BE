@@ -10,6 +10,7 @@ export declare class AuthService {
     private jwtService;
     private readonly userModel;
     private mailService;
+    private readonly logger;
     constructor(usersService: UsersService, jwtService: JwtService, userModel: Model<User>, mailService: MailService);
     validateUser(email: string, password: string, isMobile: boolean): Promise<any>;
     login(loginDto: LoginDto, isMobile: boolean): Promise<any>;

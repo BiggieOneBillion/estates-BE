@@ -26,6 +26,7 @@ import {
   ApiQuery,
   ApiParam,
   ApiConsumes,
+  ApiBearerAuth
 } from '@nestjs/swagger';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import {

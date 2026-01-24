@@ -6,9 +6,13 @@ const config_1 = require("@nestjs/config");
 const app_module_1 = require("./app.module");
 const swagger_1 = require("@nestjs/swagger");
 const http_exception_filter_1 = require("./common/filters/http-exception.filter");
+const redis_io_adapter_1 = require("./common/adapters/redis-io.adapter");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);
+    const redisIoAdapter = new redis_io_adapter_1.RedisIoAdapter(app);
+    await redisIoAdapter.connectToRedis();
+    app.useWebSocketAdapter(redisIoAdapter);
     app.enableCors({
         origin: '*',
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

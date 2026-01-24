@@ -14,10 +14,10 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationsController = void 0;
 const common_1 = require("@nestjs/common");
+const swagger_1 = require("@nestjs/swagger");
 const notifications_service_1 = require("./notifications.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
-const swagger_1 = require("@nestjs/swagger");
 let NotificationsController = class NotificationsController {
     notificationsService;
     constructor(notificationsService) {
@@ -38,36 +38,49 @@ let NotificationsController = class NotificationsController {
 };
 exports.NotificationsController = NotificationsController;
 __decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'Get all user notifications',
+        description: 'Retrieves a complete list of notifications for the currently authenticated user.',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of notifications retrieved successfully' }),
     (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Get all notifications for the current user' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Returns all notifications for the user' }),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], NotificationsController.prototype, "findAllForUser", null);
 __decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'Get unread notifications',
+        description: 'Retrieves only the unread notifications for the currently authenticated user.',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of unread notifications retrieved' }),
     (0, common_1.Get)('unread'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get all unread notifications for the current user' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Returns all unread notifications for the user' }),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], NotificationsController.prototype, "findUnreadForUser", null);
 __decorate([
-    (0, common_1.Post)(':id/read'),
-    (0, swagger_1.ApiOperation)({ summary: 'Mark a notification as read' }),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Mark notification as read',
+        description: 'Updates the status of a specific notification to read.',
+    }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Notification marked as read' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Notification not found' }),
+    (0, common_1.Post)(':id/read'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], NotificationsController.prototype, "markAsRead", null);
 __decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'Mark all notifications as read',
+        description: 'Updates all notifications for the currently authenticated user to read status.',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'All notifications successfully marked as read' }),
     (0, common_1.Post)('read-all'),
-    (0, swagger_1.ApiOperation)({ summary: 'Mark all notifications as read for the current user' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'All notifications marked as read' }),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -75,6 +88,7 @@ __decorate([
 ], NotificationsController.prototype, "markAllAsRead", null);
 exports.NotificationsController = NotificationsController = __decorate([
     (0, swagger_1.ApiTags)('Notifications'),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('notifications'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     __metadata("design:paramtypes", [notifications_service_1.NotificationsService])
