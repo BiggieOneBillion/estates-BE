@@ -5,6 +5,7 @@ import {
   RequestMethod,
 } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -33,6 +34,10 @@ import { EventsModule } from './events/events.module';
       // validationSchema: validationSchema,
     }),
     EventEmitterModule.forRoot(),
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 10,
+    }]),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var EstatesService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EstatesService = void 0;
 const common_1 = require("@nestjs/common");
@@ -18,38 +19,55 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const estate_entity_1 = require("./entities/estate.entity");
 const user_entity_1 = require("../users/entities/user.entity");
-let EstatesService = class EstatesService {
+let EstatesService = EstatesService_1 = class EstatesService {
     estateModel;
     userModel;
-    constructor(estateModel, userModel) {
+    connection;
+    logger = new common_1.Logger(EstatesService_1.name);
+    constructor(estateModel, userModel, connection) {
         this.estateModel = estateModel;
         this.userModel = userModel;
+        this.connection = connection;
     }
     async create(createEstateDto, userId) {
-        const existingEstate = await this.estateModel.findOne({
-            name: createEstateDto.name,
-        });
-        if (existingEstate) {
-            throw new common_1.ConflictException('Estate name already exists');
+        const session = await this.connection.startSession();
+        session.startTransaction();
+        try {
+            const existingEstate = await this.estateModel
+                .findOne({ name: createEstateDto.name })
+                .session(session);
+            if (existingEstate) {
+                throw new common_1.ConflictException('Estate name already exists');
+            }
+            const user = await this.userModel.findById(userId).session(session);
+            if (!user) {
+                throw new common_1.NotFoundException(`User with ID ${userId} not found`);
+            }
+            if (!user.isEmailVerified) {
+                throw new common_1.ConflictException('User email not verified yet. Cannot create estate');
+            }
+            if (user.estateId) {
+                throw new common_1.ConflictException('User already has an estate');
+            }
+            const newEstate = new this.estateModel({
+                ...createEstateDto,
+                owner: userId,
+            });
+            await newEstate.save({ session });
+            user.estateId = newEstate._id;
+            await user.save({ session });
+            await session.commitTransaction();
+            this.logger.log(`Estate "${newEstate.name}" created successfully for user ${userId}`);
+            return newEstate;
         }
-        const user = await this.userModel.findById({ _id: userId });
-        if (!user) {
-            throw new common_1.NotFoundException(`User with ID ${userId} not found`);
+        catch (error) {
+            await session.abortTransaction();
+            this.logger.error(`Failed to create estate: ${error.message}`);
+            throw error;
         }
-        if (!user.isEmailVerified) {
-            throw new common_1.ConflictException('User email not verified yet. Cannot create estate');
+        finally {
+            session.endSession();
         }
-        if (user.estateId) {
-            throw new common_1.ConflictException('User already has an estate');
-        }
-        const newEstate = new this.estateModel({
-            ...createEstateDto,
-            owner: userId,
-        });
-        await newEstate.save();
-        user.estateId = newEstate._id;
-        await user.save();
-        return newEstate;
     }
     async findAll() {
         return this.estateModel.find().exec();
@@ -82,11 +100,13 @@ let EstatesService = class EstatesService {
     }
 };
 exports.EstatesService = EstatesService;
-exports.EstatesService = EstatesService = __decorate([
+exports.EstatesService = EstatesService = EstatesService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(estate_entity_1.Estate.name)),
     __param(1, (0, mongoose_1.InjectModel)(user_entity_1.User.name)),
+    __param(2, (0, mongoose_1.InjectConnection)()),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        mongoose_2.Model])
+        mongoose_2.Model,
+        mongoose_2.Connection])
 ], EstatesService);
 //# sourceMappingURL=estates.service.js.map
