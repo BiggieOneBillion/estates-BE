@@ -39,6 +39,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @ApiTags('Gate Pass Tokens')
+@ApiBearerAuth()
 @Controller('tokens')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TokenController {
