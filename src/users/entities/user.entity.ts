@@ -340,6 +340,24 @@ export class User extends Document {
   @Prop({ default: false })
   isTwoFactorEnabled: boolean;
 
+  // Push Notifications
+  @Prop({ type: [String], default: [] })
+  fcmTokens?: string[]; // Firebase Cloud Messaging tokens for push notifications
+
+  @Prop({
+    type: {
+      email: { type: Boolean, default: true },
+      push: { type: Boolean, default: true },
+      sms: { type: Boolean, default: false },
+    },
+    default: { email: true, push: true, sms: false },
+  })
+  notificationPreferences?: {
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+  };
+
   // Additional Metadata
   @Prop()
   notes?: string; // Any additional notes about this user
