@@ -14,9 +14,8 @@ import {
   Token,
 } from './entities/token.entity';
 import * as crypto from 'crypto';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType } from '../notifications/entities/notification.entity';
-import { EventsService } from 'src/events/events.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { DomainEvents, TokenEvent } from '../common/events/domain-events';
 import { UsersService } from 'src/users/users.service';
 
 @Injectable()
@@ -25,8 +24,7 @@ export class TokenService {
 
   constructor(
     @InjectModel(Token.name) private readonly tokenModel: Model<Token>,
-    private readonly notificationsService: NotificationsService,
-    private readonly eventsService: EventsService,
+    private readonly eventEmitter: EventEmitter2,
     private readonly userService: UsersService,
   ) {}
 
@@ -96,27 +94,11 @@ export class TokenService {
 
     const savedToken = await token.save();
 
-    // Create notification for token verification by visitor
-    await this.notificationsService.createTokenNotification(
-      token.user.toString(),
-      (token._id as string).toString(),
-      token.token,
-      NotificationType.VISITOR_VERIFIED,
+    // Emit Visitor Verified Event
+    this.eventEmitter.emit(
+      DomainEvents.VISITOR_VERIFIED,
+      new TokenEvent(token.user.toString(), (token._id as string).toString(), token.token, { securityId: user }),
     );
-    // THIS IS SENT TO THE USER THAT HAS A VISITOR
-    this.eventsService.sendToUser(token.user.toString(), 'visitor_verified', {
-      tokenId: token._id,
-      token: token.token,
-      type: NotificationType.VISITOR_VERIFIED,
-      timestamp: new Date(),
-    });
-    //  THIS IS SENT TO THE SECURITY PERSONNEL
-    this.eventsService.sendToUser(user, 'visitor_verified', {
-      tokenId: token._id,
-      token: token.token,
-      type: NotificationType.VISITOR_VERIFIED,
-      timestamp: new Date(),
-    });
 
     return savedToken;
   }
@@ -438,20 +420,11 @@ export class TokenService {
 
     const savedToken = await token.save();
 
-    // Create notification for token verification
-    await this.notificationsService.createTokenNotification(
-      token.user.toString(),
-      (token._id as string).toString(),
-      token.token,
-      NotificationType.TOKEN_VERIFIED,
+    // Emit Token Verified Event
+    this.eventEmitter.emit(
+      DomainEvents.TOKEN_VERIFIED,
+      new TokenEvent(token.user.toString(), (token._id as string).toString(), token.token),
     );
-
-    this.eventsService.sendToUser(token.user.toString(), 'token_verified', {
-      tokenId: token._id,
-      token: token.token,
-      type: NotificationType.TOKEN_VERIFIED,
-      timestamp: new Date(),
-    });
 
     return savedToken;
   }
