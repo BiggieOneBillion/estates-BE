@@ -4,6 +4,8 @@ import { DomainEvents, TokenEvent } from '../common/events/domain-events';
 import { NotificationsService } from '../notifications/notifications.service';
 import { EventsService } from './events.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { PushNotificationService } from '../notifications/push-notification.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class EventsListener {
@@ -12,6 +14,8 @@ export class EventsListener {
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly eventsService: EventsService,
+    private readonly pushNotificationService: PushNotificationService,
+    private readonly usersService: UsersService,
   ) {}
 
   @OnEvent(DomainEvents.VISITOR_VERIFIED)
@@ -46,6 +50,12 @@ export class EventsListener {
         timestamp: new Date(),
       });
     }
+
+    // 4. Send push notification to token owner
+    await this.sendPushNotification(userId, {
+      title: 'Visitor Verified',
+      body: `Your visitor with token ${tokenValue} has been verified`,
+    }, { tokenId, type: 'visitor_verified' });
   }
 
   @OnEvent(DomainEvents.TOKEN_VERIFIED)
@@ -69,6 +79,12 @@ export class EventsListener {
       type: NotificationType.TOKEN_VERIFIED,
       timestamp: new Date(),
     });
+
+    // 3. Send push notification
+    await this.sendPushNotification(userId, {
+      title: 'Gate Pass Verified',
+      body: `Your gate pass ${tokenValue} has been verified by security`,
+    }, { tokenId, type: 'token_verified' });
   }
 
   @OnEvent(DomainEvents.VISITOR_REJECTED)
@@ -132,5 +148,32 @@ export class EventsListener {
       type: notificationType,
       timestamp: new Date(),
     });
+  }
+
+  private async sendPushNotification(
+    userId: string,
+    notification: { title: string; body: string },
+    data?: Record<string, string>,
+  ): Promise<void> {
+    try {
+      const user = await this.usersService.findOne(userId);
+      
+      // Check if user has push notifications enabled
+      if (!user.notificationPreferences?.push) {
+        this.logger.debug(`Push notifications disabled for user ${userId}`);
+        return;
+      }
+
+      // Send to all registered devices
+      if (user.fcmTokens && user.fcmTokens.length > 0) {
+        await this.pushNotificationService.sendToMultipleDevices(
+          user.fcmTokens,
+          notification,
+          data,
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Failed to send push notification: ${error.message}`);
+    }
   }
 }

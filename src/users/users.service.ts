@@ -208,4 +208,46 @@ export class UsersService {
       user: updatedUser,
     };
   }
+
+  async registerFcmToken(userId: string, fcmToken: string): Promise<User> {
+    const user = await this.findOne(userId);
+    
+    if (!user.fcmTokens) {
+      user.fcmTokens = [];
+    }
+
+    // Add token if it doesn't already exist
+    if (!user.fcmTokens.includes(fcmToken)) {
+      user.fcmTokens.push(fcmToken);
+      await user.save();
+    }
+
+    return user;
+  }
+
+  async removeFcmToken(userId: string, fcmToken: string): Promise<User> {
+    const user = await this.findOne(userId);
+    
+    if (user.fcmTokens) {
+      user.fcmTokens = user.fcmTokens.filter(token => token !== fcmToken);
+      await user.save();
+    }
+
+    return user;
+  }
+
+  async updateNotificationPreferences(
+    userId: string,
+    preferences: { email?: boolean; push?: boolean; sms?: boolean },
+  ): Promise<User> {
+    const user = await this.findOne(userId);
+    
+    user.notificationPreferences = {
+      ...user.notificationPreferences,
+      ...preferences,
+    };
+
+    await user.save();
+    return user;
+  }
 }
