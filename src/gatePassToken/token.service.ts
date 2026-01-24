@@ -299,15 +299,6 @@ export class TokenService {
     const tokenString = token.token;
     const tokenOwnerId = token.user.toString();
     const securityId = securityPersonnel.id.toString();
-    const timestamp = new Date();
-
-    // Common event payload to reduce object creation
-    const createEventPayload = (type: NotificationType) => ({
-      tokenId: token._id,
-      token: tokenString,
-      type,
-      timestamp,
-    });
 
     // 6. Handle notifications based on verification status
     if (
@@ -316,71 +307,25 @@ export class TokenService {
         hasUserVerifiedVisitorStatus.COMPLETED
     ) {
       // Case: Visitor verification completed
-      await this.notificationsService.createTokenNotification(
-        tokenOwnerId,
-        tokenId,
-        tokenString,
-        NotificationType.VISITOR_VERIFIED,
-        false,
-      );
-
-      // Notify security personnel via WebSocket
-      this.eventsService.sendToUser(
-        securityId,
-        'visitor_verified',
-        createEventPayload(NotificationType.VISITOR_VERIFIED),
+      this.eventEmitter.emit(
+        DomainEvents.VISITOR_VERIFIED,
+        new TokenEvent(tokenOwnerId, tokenId, tokenString, { securityId }),
       );
     } else if (
       updateTokenDto.hasUserVerifiedVisitor &&
       updateTokenDto.hasUserVerifiedVisitor ===
         hasUserVerifiedVisitorStatus.FAILED
     ) {
-      // Case: Visitor verification failed - batch notifications
-      await Promise.all([
-        // Notify token owner
-        this.notificationsService.createTokenNotification(
-          tokenOwnerId,
-          tokenId,
-          tokenString,
-          NotificationType.TOKEN_UPDATED,
-          true,
-        ),
-        // Notify security personnel
-        this.notificationsService.createTokenNotification(
-          securityId,
-          tokenId,
-          tokenString,
-          NotificationType.TOKEN_UPDATED,
-          true,
-        ),
-      ]);
-
-      // Send WebSocket notification to security
-      this.eventsService.sendToUser(
-        securityId,
-        'visitor_rejected',
-        createEventPayload(NotificationType.TOKEN_UPDATED),
+      // Case: Visitor verification failed
+      this.eventEmitter.emit(
+        DomainEvents.VISITOR_REJECTED,
+        new TokenEvent(tokenOwnerId, tokenId, tokenString, { securityId }),
       );
     } else {
       // Case: General token update
-      const notificationType = isImage
-        ? NotificationType.VERIFY_VISTOR
-        : NotificationType.TOKEN_UPDATED;
-
-      // Create notification
-      await this.notificationsService.createTokenNotification(
-        tokenOwnerId,
-        tokenId,
-        tokenString,
-        notificationType,
-        true,
-      );
-
-      // Send WebSocket event to user
-      this.eventsService.sendToUser(
-        tokenOwnerId,
-        'user_updated',
-        createEventPayload(notificationType),
+      this.eventEmitter.emit(
+        DomainEvents.TOKEN_UPDATED,
+        new TokenEvent(tokenOwnerId, tokenId, tokenString, { isImage }),
       );
     }
 

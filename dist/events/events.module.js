@@ -12,13 +12,15 @@ const events_gateway_1 = require("./events.gateway");
 const events_service_1 = require("./events.service");
 const auth_module_1 = require("../auth/auth.module");
 const users_module_1 = require("../users/users.module");
+const events_listener_1 = require("./events.listener");
+const notifications_module_1 = require("../notifications/notifications.module");
 let EventsModule = class EventsModule {
 };
 exports.EventsModule = EventsModule;
 exports.EventsModule = EventsModule = __decorate([
     (0, common_1.Module)({
-        imports: [auth_module_1.AuthModule, users_module_1.UsersModule],
-        providers: [events_gateway_1.EventsGateway, events_service_1.EventsService],
+        imports: [auth_module_1.AuthModule, users_module_1.UsersModule, notifications_module_1.NotificationsModule],
+        providers: [events_gateway_1.EventsGateway, events_service_1.EventsService, events_listener_1.EventsListener],
         exports: [events_service_1.EventsService],
     })
 ], EventsModule);
