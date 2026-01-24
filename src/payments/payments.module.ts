@@ -13,7 +13,7 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService],
-  exports: [PaymentsService],
+  providers: [PaymentsService, PaystackService],
+  exports: [PaymentsService, PaystackService],
 })
 export class PaymentsModule {}

@@ -252,4 +252,13 @@ export class UsersService {
     await user.save();
     return user;
   }
+
+  async findByEstateAndRoles(estateId: string, roles: string[]): Promise<User[]> {
+    return this.userModel
+      .find({
+        estateId,
+        primaryRole: { $in: roles },
+      })
+      .exec();
+  }
 }

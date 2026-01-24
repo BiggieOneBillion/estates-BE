@@ -114,4 +114,22 @@ export class LeviesService {
     // It will return users who haven't paid this levy
     throw new Error('Method not implemented yet');
   }
+
+  async findLeviesDueOn(targetDate: Date): Promise<Levy[]> {
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    return this.levyModel
+      .find({
+        isActive: true,
+        dueDate: {
+          $gte: startOfDay,
+          $lte: endOfDay,
+        },
+      })
+      .exec();
+  }
 }
