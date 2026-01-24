@@ -1,9 +1,9 @@
-// src/gatePassToken/token.service.ts
 import {
   Injectable,
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -12,17 +12,17 @@ import { UpdateTokenDto } from './dto/update-token.dto';
 import {
   hasUserVerifiedVisitorStatus,
   Token,
-  TokenType,
 } from './entities/token.entity';
 import * as crypto from 'crypto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
 import { EventsService } from 'src/events/events.service';
 import { UsersService } from 'src/users/users.service';
-import { UserRole } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class TokenService {
+  private readonly logger = new Logger(TokenService.name);
+
   constructor(
     @InjectModel(Token.name) private readonly tokenModel: Model<Token>,
     private readonly notificationsService: NotificationsService,
@@ -128,7 +128,6 @@ export class TokenService {
   }
 
   async findAllByUser(userId: string): Promise<Token[]> {
-    // console.log("DATA FOUND:", this.tokenModel.find({ user: userId }).exec())
     return this.tokenModel.find({ user: userId }).exec();
   }
 
