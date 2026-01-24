@@ -1,16 +1,15 @@
-// src/auth/auth.service.ts
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
-// import { JwtPayload } from './interfaces/jwt-payload.interface';
-import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserRole } from 'src/users/entities/user.entity';
@@ -19,6 +18,8 @@ import { MailService } from 'src/common/services/mail.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -38,9 +39,8 @@ export class AuthService {
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
-    console.log('Password Valid', isPasswordValid);
-
     if (!isPasswordValid) {
+      this.logger.warn(`Failed login attempt for email: ${email}`);
       throw new BadRequestException('Invalid credentials');
     }
 
@@ -111,10 +111,6 @@ export class AuthService {
 
   async validateUserEmailLogin(info: { email: string; code: string }) {
     const { email, code } = info;
-
-    console.log('Email:', email); // Add this line to log the email
-    console.log('Code:', code); // Add this line to log the cod
-
     const user = await this.usersService.findByEmail(email);
 
     // console.log('User:', user); // Add this line to log the user
@@ -182,7 +178,7 @@ export class AuthService {
     // console.log('New user:', newUser); // Add this line to log the newUser object
 
     const savedUser = await newUser.save();
-    console.log('Registration verification token', verificationToken);
+    this.logger.log(`New user registered: ${savedUser.email}`);
     // await this.mailService.sendVerificationEmail(
     //   registerDto.email,
     //   verificationToken,

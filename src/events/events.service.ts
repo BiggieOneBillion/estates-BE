@@ -1,5 +1,4 @@
-// src/events/events.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Socket } from 'socket.io';
 
 interface SocketClient {
@@ -9,6 +8,7 @@ interface SocketClient {
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
   private clients: SocketClient[] = [];
 
   addClient(userId: string, socket: Socket) {
@@ -20,15 +20,14 @@ export class EventsService {
   }
 
   sendToUser(userId: string, event: string, payload: any) {
-    console.log('From socket connection', payload);
-    console.log("USER ID", userId)
- console.log("ALL SOCKET CLIENTS------------", this.clients)
+    this.logger.debug(`Sending event ${event} to user ${userId}`);
     this.clients
       .filter((c) => c.userId.toString() === userId.toString())
       .forEach((c) => c.socket.emit(event, payload));
   }
 
   broadcast(event: string, payload: any) {
+    this.logger.debug(`Broadcasting event ${event}`);
     this.clients.forEach((c) => c.socket.emit(event, payload));
   }
 }
