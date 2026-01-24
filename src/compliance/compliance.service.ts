@@ -47,7 +47,7 @@ export class ComplianceService {
       let totalOutstanding = 0;
 
       for (const levy of enforcedLevies) {
-        const hasPaid = await this.paymentsService.hasUserPaidLevy(userId, levy._id.toString());
+        const hasPaid = await this.paymentsService.hasUserPaidLevy(userId, (levy._id as any).toString());
         
         if (!hasPaid) {
           // Check if levy is past due date (including grace period)
@@ -103,7 +103,7 @@ export class ComplianceService {
     };
 
     for (const user of users) {
-      const compliance = await this.checkUserCompliance(user._id.toString());
+      const compliance = await this.checkUserCompliance((user._id as any).toString());
       
       if (compliance.isCompliant) {
         report.compliantUsers++;
