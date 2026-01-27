@@ -194,9 +194,33 @@ export class MailService {
 
     const info = await this.transporter.sendMail(mailOptions);
 
-    // If using Ethereal in development, log the preview URL
     if (this.configService.get('NODE_ENV') !== 'production') {
       console.log('Payment reminder email preview URL:', nodemailer.getTestMessageUrl(info));
+    }
+
+    return info;
+  }
+
+  async sendBasicEmail(to: string, subject: string, message: string) {
+    const mailOptions = {
+      from: '"Estate Management" <noreply@estatemanagement.com>',
+      to,
+      subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 5px;">
+            <h3>Security Notification</h3>
+            <p>${message}</p>
+            <p style="margin-top: 30px;">Best regards,<br>Estate Management Team</p>
+          </div>
+        </div>
+      `,
+    };
+
+    const info = await this.transporter.sendMail(mailOptions);
+
+    if (this.configService.get('NODE_ENV') !== 'production') {
+      console.log('Basic email preview URL:', nodemailer.getTestMessageUrl(info));
     }
 
     return info;
