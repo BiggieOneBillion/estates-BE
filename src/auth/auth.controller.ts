@@ -13,6 +13,7 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { VerifiedGuard } from './guards/verified.guard';
 import {
   ApiTags,
   ApiOperation,
@@ -26,6 +27,7 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyLoginResponseDto } from './dto/verify-login-response.dto';
 import { Response } from 'express';
 import { request } from 'http';
 
@@ -60,6 +62,7 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Login email verification successful and returns user tokens.',
+    type: VerifyLoginResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
   @Post('login/verify')
@@ -75,6 +78,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad request or user already exists' })
   @Post('register')
   async Register(@Body() registerDto: RegisterDto) {
+    console.log(registerDto);
     return this.authService.register(registerDto);
   }
 
@@ -100,7 +104,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, VerifiedGuard)
   @Get('profile')
   getProfile(@Request() req) {
     return req.user;
@@ -166,7 +170,7 @@ export class AuthController {
     await this.authService.resetPassword(resetToken, resetPasswordDto.newPassword);
     res.clearCookie('reset_token');
 
-    return { message: 'Password has been reset successfully' };
+    return { message: 'Password has been reset successfully'};
   }
 }
 

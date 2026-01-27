@@ -15,6 +15,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User, UserRole } from 'src/users/entities/user.entity';
 import { Model } from 'mongoose';
 import { MailService } from 'src/common/services/mail.service';
+import { UserResponseDto, VerifyLoginResponseDto } from './dto/verify-login-response.dto';
+import { plainToInstance } from "class-transformer"
 
 @Injectable()
 export class AuthService {
@@ -46,8 +48,8 @@ export class AuthService {
 
     if (!isMobile && user.primaryRole !== UserRole.SUPER_ADMIN) { // checks if the device is mobile if not so, then only super admin can log in.
       return {
-        message: 'You must be an estate owner',
-        status: 404,
+        message: 'Login through your mobile device',
+        status: 400,
       };
     }
 
@@ -56,8 +58,17 @@ export class AuthService {
         sub: user._id as string,
         email: user.email,
         roles: user.primaryRole as UserRole,
+        type: 'pre-auth',
+        isVerified: false,
         // estate: user.estate,
       };
+
+      // here we resend the email to the user and tell them to verify their email
+      await this.mailService.sendVerificationEmail(
+        user.email,
+        user.verificationToken!,
+        `${user.firstName} ${user.lastName}`,
+      );
       // Return custom response instead of throwing exception
       return {
         status: 222,
@@ -67,6 +78,34 @@ export class AuthService {
         access_token: this.jwtService.sign(payload),
       };
     }
+
+    if(user.isActive){ // IF USER IS ACTIVE ( THAT IS LOGGED IN ON ANOTHER DEVICE) AND WANT TO LOG IN ON THIS DEVICE
+        const payload: JwtPayload = {
+        sub: user._id as string,
+        email: user.email,
+        roles: user.primaryRole as UserRole,
+        type: 'pre-auth',
+        isVerified: false,
+        // estate: user.estate,
+      };
+
+      // here we resend the email to the user and tell them to verify their email
+      await this.mailService.sendVerificationEmail(
+        user.email,
+        user.verificationToken!,
+        `${user.firstName} ${user.lastName}`,
+      );
+      // Return custom response instead of throwing exception
+      return {
+        status: 222,
+        message: 'User logged in on another device',
+        active: true,
+        email: user.email,
+        access_token: this.jwtService.sign(payload),
+      };
+    }
+
+    
 
     // Generate a 6-digit verification code
     const verificationToken = Math.floor(
@@ -121,7 +160,7 @@ export class AuthService {
 
     const isVerificationCodeValid = code === user.verificationToken;
 
-    // console.log('Verification code valid:', isVerificationCodeValid); // Add this line to log the verification code validity
+    console.log('Verification code valid:', isVerificationCodeValid); // Add this line to log the verification code validity
 
     if (!isVerificationCodeValid) {
       throw new BadRequestException('Invalid credentials');
@@ -137,11 +176,19 @@ export class AuthService {
       sub: user._id as string,
       email: user.email,
       roles: user.primaryRole as UserRole,
+      type: 'auth',
+      isVerified: true,
       // estate: user.estate,
     };
 
+    const userInstance = plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
+
+    // console.log('User instance:', userInstance);
+
     return {
-      user,
+      user: userInstance,
       access_token: this.jwtService.sign(payload),
     };
   }
@@ -207,6 +254,8 @@ export class AuthService {
       sub: user.id.toString(),
       email: user.email,
       roles: user.roles,
+      type: 'auth',
+      isVerified: false, // Registration still needs email verification
       estate: user.estate,
     };
 
