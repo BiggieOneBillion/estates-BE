@@ -22,17 +22,36 @@ const crypto = require("crypto");
 const event_emitter_1 = require("@nestjs/event-emitter");
 const domain_events_1 = require("../common/events/domain-events");
 const users_service_1 = require("../users/users.service");
+const compliance_service_1 = require("../compliance/compliance.service");
 let TokenService = TokenService_1 = class TokenService {
     tokenModel;
     eventEmitter;
     userService;
+    complianceService;
     logger = new common_1.Logger(TokenService_1.name);
-    constructor(tokenModel, eventEmitter, userService) {
+    constructor(tokenModel, eventEmitter, userService, complianceService) {
         this.tokenModel = tokenModel;
         this.eventEmitter = eventEmitter;
         this.userService = userService;
+        this.complianceService = complianceService;
     }
     async create(createTokenDto, userId) {
+        const compliance = await this.complianceService.checkUserCompliance(userId);
+        if (!compliance.canCreateToken) {
+            throw new common_1.ForbiddenException({
+                message: 'Cannot create gate pass token. You have outstanding payments.',
+                statusCode: 403,
+                error: 'Payment Required',
+                outstandingLevies: compliance.outstandingLevies.map(levy => ({
+                    id: levy._id,
+                    title: levy.title,
+                    amount: levy.amount,
+                    dueDate: levy.dueDate,
+                    description: levy.description,
+                })),
+                totalOutstanding: compliance.totalOutstanding,
+            });
+        }
         if (!createTokenDto.token) {
             createTokenDto.token = this.generateUniqueToken();
         }
@@ -165,6 +184,7 @@ exports.TokenService = TokenService = TokenService_1 = __decorate([
     __param(0, (0, mongoose_1.InjectModel)(token_entity_1.Token.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
         event_emitter_1.EventEmitter2,
-        users_service_1.UsersService])
+        users_service_1.UsersService,
+        compliance_service_1.ComplianceService])
 ], TokenService);
 //# sourceMappingURL=token.service.js.map

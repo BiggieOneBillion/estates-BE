@@ -20,11 +20,12 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/role.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
+import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 
 @ApiTags('Levies')
 @ApiBearerAuth()
 @Controller('levies')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, VerifiedGuard, RolesGuard)
 export class LeviesController {
   constructor(
     private readonly leviesService: LeviesService,

@@ -6,10 +6,11 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
 import { ApiTags, ApiConsumes, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Roles } from 'src/auth/decorators/role.decorator';
+import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 
 @ApiTags('cloudinary')
 @Controller('cloudinary')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, VerifiedGuard, RolesGuard)
 export class CloudinaryController {
   constructor(private readonly cloudinaryService: CloudinaryService) {}
 

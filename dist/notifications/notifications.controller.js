@@ -18,6 +18,7 @@ const swagger_1 = require("@nestjs/swagger");
 const notifications_service_1 = require("./notifications.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
+const verified_guard_1 = require("../auth/guards/verified.guard");
 let NotificationsController = class NotificationsController {
     notificationsService;
     constructor(notificationsService) {
@@ -90,7 +91,7 @@ exports.NotificationsController = NotificationsController = __decorate([
     (0, swagger_1.ApiTags)('Notifications'),
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('notifications'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard, roles_guard_1.RolesGuard),
     __metadata("design:paramtypes", [notifications_service_1.NotificationsService])
 ], NotificationsController);
 //# sourceMappingURL=notifications.controller.js.map

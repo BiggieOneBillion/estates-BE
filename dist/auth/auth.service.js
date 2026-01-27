@@ -22,6 +22,8 @@ const mongoose_1 = require("@nestjs/mongoose");
 const user_entity_1 = require("../users/entities/user.entity");
 const mongoose_2 = require("mongoose");
 const mail_service_1 = require("../common/services/mail.service");
+const verify_login_response_dto_1 = require("./dto/verify-login-response.dto");
+const class_transformer_1 = require("class-transformer");
 let AuthService = AuthService_1 = class AuthService {
     usersService;
     jwtService;
@@ -46,8 +48,8 @@ let AuthService = AuthService_1 = class AuthService {
         }
         if (!isMobile && user.primaryRole !== user_entity_1.UserRole.SUPER_ADMIN) {
             return {
-                message: 'You must be an estate owner',
-                status: 404,
+                message: 'Login through your mobile device',
+                status: 400,
             };
         }
         if (!user.isEmailVerified && user.primaryRole === user_entity_1.UserRole.SUPER_ADMIN) {
@@ -55,11 +57,35 @@ let AuthService = AuthService_1 = class AuthService {
                 sub: user._id,
                 email: user.email,
                 roles: user.primaryRole,
+                type: 'pre-auth',
+                isVerified: false,
+                reason: 'unverified_email',
+                version: user.tokenVersion,
             };
+            await this.mailService.sendVerificationEmail(user.email, user.verificationToken, `${user.firstName} ${user.lastName}`);
             return {
                 status: 222,
                 message: 'Email not verified',
                 verified: false,
+                email: user.email,
+                access_token: this.jwtService.sign(payload),
+            };
+        }
+        if (user.isActive) {
+            const payload = {
+                sub: user._id,
+                email: user.email,
+                roles: user.primaryRole,
+                type: 'pre-auth',
+                isVerified: false,
+                reason: 'active_on_another_device',
+                version: user.tokenVersion,
+            };
+            await this.mailService.sendVerificationEmail(user.email, user.verificationToken, `${user.firstName} ${user.lastName}`);
+            return {
+                status: 222,
+                message: 'User logged in on another device',
+                active: true,
                 email: user.email,
                 access_token: this.jwtService.sign(payload),
             };
@@ -89,9 +115,11 @@ let AuthService = AuthService_1 = class AuthService {
             throw new common_1.BadRequestException('Invalid credentials');
         }
         const isVerificationCodeValid = code === user.verificationToken;
+        console.log('Verification code valid:', isVerificationCodeValid);
         if (!isVerificationCodeValid) {
             throw new common_1.BadRequestException('Invalid credentials');
         }
+        user.isActive = true;
         user.lastLogin = new Date();
         user.verificationToken = null;
         await user.save();
@@ -99,9 +127,15 @@ let AuthService = AuthService_1 = class AuthService {
             sub: user._id,
             email: user.email,
             roles: user.primaryRole,
+            type: 'auth',
+            isVerified: true,
+            version: user.tokenVersion,
         };
+        const userInstance = (0, class_transformer_1.plainToInstance)(verify_login_response_dto_1.UserResponseDto, user, {
+            excludeExtraneousValues: true,
+        });
         return {
-            user,
+            user: userInstance,
             access_token: this.jwtService.sign(payload),
         };
     }
@@ -141,6 +175,9 @@ let AuthService = AuthService_1 = class AuthService {
             sub: user.id.toString(),
             email: user.email,
             roles: user.roles,
+            type: 'auth',
+            isVerified: false,
+            version: 0,
             estate: user.estate,
         };
         return {
@@ -170,6 +207,45 @@ let AuthService = AuthService_1 = class AuthService {
         return {
             message: 'Email Verification Successful',
             status: 200,
+        };
+    }
+    async verifyPreAuth(info, payload) {
+        const { email, code } = info;
+        const user = await this.usersService.findByEmail(email);
+        if (!user) {
+            throw new common_1.BadRequestException('User not found');
+        }
+        if (user._id.toString() !== payload.sub) {
+            throw new common_1.UnauthorizedException('Identity mismatch');
+        }
+        if (code !== user.verificationToken) {
+            throw new common_1.BadRequestException('Invalid verification code');
+        }
+        if (payload.reason === 'unverified_email') {
+            user.isEmailVerified = true;
+        }
+        else if (payload.reason === 'active_on_another_device') {
+            user.tokenVersion += 1;
+            await this.mailService.sendBasicEmail(user.email, 'Security Alert: New Device Login', `Hello ${user.firstName}, you have successfully switched your active session to a new device. Previous sessions have been logged out for your security.`);
+        }
+        user.isActive = true;
+        user.lastLogin = new Date();
+        user.verificationToken = null;
+        await user.save();
+        const newPayload = {
+            sub: user._id,
+            email: user.email,
+            roles: user.primaryRole,
+            type: 'auth',
+            isVerified: true,
+            version: user.tokenVersion,
+        };
+        const userInstance = (0, class_transformer_1.plainToInstance)(verify_login_response_dto_1.UserResponseDto, user, {
+            excludeExtraneousValues: true,
+        });
+        return {
+            user: userInstance,
+            access_token: this.jwtService.sign(newPayload),
         };
     }
     async sendPasswordResetOTP(email) {
