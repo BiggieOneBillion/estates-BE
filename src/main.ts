@@ -39,17 +39,20 @@ async function bootstrap() {
   // Global filters
   app.useGlobalFilters(new HttpExceptionFilter(), new AllExceptionsFilter());
 
+
+
   // Swagger/OpenAPI documentation
   const config = new DocumentBuilder()
     .setTitle('Estate Management System API')
     .setDescription('API documentation for the Estate Management System')
     .setVersion('1.0')
+    .addServer('/api')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Prefix all routes with /api
+    // Prefix all routes with /api
   app.setGlobalPrefix('api');
 
   const port = configService.get('PORT') || 3000;
