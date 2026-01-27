@@ -259,55 +259,55 @@ export class UsersController {
     );
   }
 
-  @ApiOperation({
-    summary: 'Create a general user',
-    description: 'Allows Super Admins or Admins with CREATE_USERS permission to create a general user (non-admin, non-landlord, non-tenant).',
-  })
-  @ApiResponse({ status: 201, description: 'User created successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
-  @Post('create/user')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async createUser(@Body() createUserDto: CreateUserDto, @Request() req) {
-    if (
-      createUserDto.primaryRole === UserRole.LANDLORD ||
-      createUserDto.primaryRole === UserRole.TENANT ||
-      createUserDto.primaryRole === UserRole.ADMIN ||
-      createUserDto.primaryRole === UserRole.SUPER_ADMIN ||
-      createUserDto.primaryRole === UserRole.SITE_ADMIN
-    ) {
-      throw new ForbiddenException(
-        'You can only create a users that are not admins, landlord, or tenant',
-      );
-    }
-    const { userId, roles } = req.user;
-    const user = await this.usersService.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (roles === UserRole.ADMIN) {
-      if (!user.grantedPermissions) {
-        throw new ForbiddenException(
-          'You do not have permission to create users',
-        );
-      }
-      const requiredPermission = user.grantedPermissions!.filter(
-        (permission) =>
-          permission.actions.includes(PermissionAction.CREATE) &&
-          permission.resource === ResourceType.USERS,
-      );
-      if (requiredPermission.length === 0) {
-        throw new ForbiddenException(
-          'You do not have permission to create users',
-        );
-      }
-    }
-    return this.userManagement.createUser(
-      userId,
-      createUserDto,
-      user.estateId!.toString(),
-    );
-  }
+  // @ApiOperation({
+  //   summary: 'Create a general user',
+  //   description: 'Allows Super Admins or Admins with CREATE_USERS permission to create a general user (non-admin, non-landlord, non-tenant).',
+  // })
+  // @ApiResponse({ status: 201, description: 'User created successfully' })
+  // @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
+  // @Post('create/user')
+  // @UseGuards(RolesGuard)
+  // @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  // async createUser(@Body() createUserDto: CreateUserDto, @Request() req) {
+  //   if (
+  //     createUserDto.primaryRole === UserRole.LANDLORD ||
+  //     createUserDto.primaryRole === UserRole.TENANT ||
+  //     createUserDto.primaryRole === UserRole.ADMIN ||
+  //     createUserDto.primaryRole === UserRole.SUPER_ADMIN ||
+  //     createUserDto.primaryRole === UserRole.SITE_ADMIN
+  //   ) {
+  //     throw new ForbiddenException(
+  //       'You can only create a users that are not admins, landlord, or tenant',
+  //     );
+  //   }
+  //   const { userId, roles } = req.user;
+  //   const user = await this.usersService.findOne(userId);
+  //   if (!user) {
+  //     throw new NotFoundException('User not found');
+  //   }
+  //   if (roles === UserRole.ADMIN) {
+  //     if (!user.grantedPermissions) {
+  //       throw new ForbiddenException(
+  //         'You do not have permission to create users',
+  //       );
+  //     }
+  //     const requiredPermission = user.grantedPermissions!.filter(
+  //       (permission) =>
+  //         permission.actions.includes(PermissionAction.CREATE) &&
+  //         permission.resource === ResourceType.USERS,
+  //     );
+  //     if (requiredPermission.length === 0) {
+  //       throw new ForbiddenException(
+  //         'You do not have permission to create users',
+  //       );
+  //     }
+  //   }
+  //   return this.userManagement.createUser(
+  //     userId,
+  //     createUserDto,
+  //     user.estateId!.toString(),
+  //   );
+  // }
 
   @ApiOperation({
     summary: 'Get all users in the estate',

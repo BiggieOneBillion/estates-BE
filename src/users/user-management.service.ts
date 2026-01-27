@@ -600,6 +600,10 @@ export class UserManagementService {
 
   private getPositionPermissions(position: AdminPosition): Permission[] {
     const positionPermissions: Record<AdminPosition, Permission[]> = {
+      [AdminPosition.SUPER_ADMIN]: [
+        { resource: ResourceType.PROPERTIES, actions: [PermissionAction.MANAGE] },
+        { resource: ResourceType.MAINTENANCE, actions: [PermissionAction.MANAGE] },
+      ],
       [AdminPosition.FACILITY_MANAGER]: [
         { resource: ResourceType.PROPERTIES, actions: [PermissionAction.MANAGE] },
         { resource: ResourceType.MAINTENANCE, actions: [PermissionAction.MANAGE] },
