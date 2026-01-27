@@ -24,11 +24,12 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from 'src/users/entities/user.entity';
 import { Roles } from 'src/auth/decorators/role.decorator';
 import { UsersService } from 'src/users/users.service';
+import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 
 @ApiTags('Estates')
 @ApiBearerAuth()
 @Controller('estates')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, VerifiedGuard)
 export class EstatesController {
   constructor(
     private readonly estatesService: EstatesService,

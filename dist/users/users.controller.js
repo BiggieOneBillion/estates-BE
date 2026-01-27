@@ -16,14 +16,20 @@ exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const users_service_1 = require("./users.service");
-const create_user_dto_1 = require("./dto/create-user.dto");
 const update_user_dto_1 = require("./dto/update-user.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const user_entity_1 = require("./entities/user.entity");
 const role_decorator_1 = require("../auth/decorators/role.decorator");
-const util_fn_1 = require("../common/utils/util-fn");
 const user_management_service_1 = require("./user-management.service");
+const fcm_token_dto_1 = require("./dto/fcm-token.dto");
+const create_landlord_dto_1 = require("./dto/create-landlord.dto");
+const create_security_dto_1 = require("./dto/create-security.dto");
+const create_tenant_dto_1 = require("./dto/create-tenant.dto");
+const create_admin_dto_1 = require("./dto/create-admin.dto");
+const update_profile_dto_1 = require("./dto/update-profile.dto");
+const update_permissions_dto_1 = require("./dto/update-permissions.dto");
+const verified_guard_1 = require("../auth/guards/verified.guard");
 let UsersController = class UsersController {
     usersService;
     userManagement;
@@ -31,8 +37,8 @@ let UsersController = class UsersController {
         this.usersService = usersService;
         this.userManagement = userManagement;
     }
-    async createAdmins(createUserDto, req) {
-        if (createUserDto.primaryRole !== user_entity_1.UserRole.ADMIN) {
+    async createAdmins(createAdminDto, req) {
+        if (createAdminDto.primaryRole !== user_entity_1.UserRole.ADMIN) {
             throw new common_1.ForbiddenException('You can only create an admin user');
         }
         const { userId, roles } = req.user;
@@ -50,13 +56,19 @@ let UsersController = class UsersController {
                 throw new common_1.ForbiddenException('You do not have permission to create users');
             }
         }
-        if (!createUserDto.password) {
-            createUserDto.password = (0, util_fn_1.generateStrongPassword)();
-        }
-        return this.usersService.create(createUserDto, userId);
+        return this.userManagement.createAdmin(userId, {
+            firstName: createAdminDto.firstName,
+            lastName: createAdminDto.lastName,
+            email: createAdminDto.email,
+            phone: createAdminDto.phone,
+            position: createAdminDto.adminDetails.position,
+            customPositionTitle: createAdminDto.adminDetails?.customPositionTitle,
+            department: createAdminDto.adminDetails?.department,
+            additionalPermissions: createAdminDto.adminDetails?.additionalPermissions,
+        }, user.estateId.toString());
     }
-    async createLandLord(createUserDto, req) {
-        if (createUserDto.primaryRole !== user_entity_1.UserRole.LANDLORD) {
+    async createLandLord(createLandlordDto, req) {
+        if (createLandlordDto.primaryRole !== user_entity_1.UserRole.LANDLORD) {
             throw new common_1.ForbiddenException('You can only create a landlord');
         }
         const { userId, roles } = req.user;
@@ -75,15 +87,15 @@ let UsersController = class UsersController {
             }
         }
         return this.userManagement.createLandlord(userId, {
-            firstName: createUserDto.firstName,
-            lastName: createUserDto.lastName,
-            email: createUserDto.email,
-            phone: createUserDto.phone,
-            canCreateTenants: createUserDto.canCreateTenants,
+            firstName: createLandlordDto.firstName,
+            lastName: createLandlordDto.lastName,
+            email: createLandlordDto.email,
+            phone: createLandlordDto.phone,
+            canCreateTenants: createLandlordDto.canCreateTenants,
         }, user.estateId.toString());
     }
-    async createTenant(createUserDto, req) {
-        if (createUserDto.primaryRole !== user_entity_1.UserRole.TENANT) {
+    async createTenant(createTenantDto, req) {
+        if (createTenantDto.primaryRole !== user_entity_1.UserRole.TENANT) {
             throw new common_1.ForbiddenException('You can only create a tenant');
         }
         const { userId, roles } = req.user;
@@ -91,15 +103,31 @@ let UsersController = class UsersController {
         if (!user) {
             throw new common_1.NotFoundException('User not found');
         }
-        if (roles === user_entity_1.UserRole.ADMIN || roles === user_entity_1.UserRole.LANDLORD) {
-            if (createUserDto.primaryRole !== user_entity_1.UserRole.TENANT ||
-                createUserDto.tenantDetails?.landlordId !== userId) {
-                throw new common_1.ForbiddenException('You can only create tenants under you');
+        const targetLandlordId = createTenantDto.tenantDetails.landlordId;
+        if (roles === user_entity_1.UserRole.LANDLORD || roles === user_entity_1.UserRole.ADMIN) {
+            if (targetLandlordId !== userId && roles !== user_entity_1.UserRole.SUPER_ADMIN) {
+                const canCreateForOthers = roles === user_entity_1.UserRole.ADMIN &&
+                    user.grantedPermissions?.some(p => p.resource === user_entity_1.ResourceType.USERS && p.actions.includes(user_entity_1.PermissionAction.CREATE));
+                if (!canCreateForOthers && targetLandlordId !== userId) {
+                    throw new common_1.ForbiddenException('You can only create tenants under your own account');
+                }
             }
         }
-        return this.usersService.create(createUserDto, userId);
+        return this.userManagement.createTenant(targetLandlordId, {
+            firstName: createTenantDto.firstName,
+            lastName: createTenantDto.lastName,
+            email: createTenantDto.email,
+            phone: createTenantDto.phone,
+            propertyUnit: createTenantDto.tenantDetails?.propertyUnit,
+            leaseStartDate: createTenantDto.tenantDetails?.leaseStartDate
+                ? new Date(createTenantDto.tenantDetails.leaseStartDate)
+                : undefined,
+            leaseEndDate: createTenantDto.tenantDetails?.leaseEndDate
+                ? new Date(createTenantDto.tenantDetails.leaseEndDate)
+                : undefined,
+        }, user.estateId.toString());
     }
-    async createSecurity(createUserDto, req) {
+    async createSecurity(createSecurityDto, req) {
         const { userId, roles } = req.user;
         const user = await this.usersService.findOne(userId);
         if (!user) {
@@ -116,36 +144,11 @@ let UsersController = class UsersController {
             }
         }
         return this.userManagement.createSecurity(userId, {
-            firstName: createUserDto.firstName,
-            lastName: createUserDto.lastName,
-            email: createUserDto.email,
-            phone: createUserDto.phone,
+            firstName: createSecurityDto.firstName,
+            lastName: createSecurityDto.lastName,
+            email: createSecurityDto.email,
+            phone: createSecurityDto.phone,
         }, user.estateId.toString());
-    }
-    async createUser(createUserDto, req) {
-        if (createUserDto.primaryRole === user_entity_1.UserRole.LANDLORD ||
-            createUserDto.primaryRole === user_entity_1.UserRole.TENANT ||
-            createUserDto.primaryRole === user_entity_1.UserRole.ADMIN ||
-            createUserDto.primaryRole === user_entity_1.UserRole.SUPER_ADMIN ||
-            createUserDto.primaryRole === user_entity_1.UserRole.SITE_ADMIN) {
-            throw new common_1.ForbiddenException('You can only create a users that are not admins, landlord, or tenant');
-        }
-        const { userId, roles } = req.user;
-        const user = await this.usersService.findOne(userId);
-        if (!user) {
-            throw new common_1.NotFoundException('User not found');
-        }
-        if (roles === user_entity_1.UserRole.ADMIN) {
-            if (!user.grantedPermissions) {
-                throw new common_1.ForbiddenException('You do not have permission to create users');
-            }
-            const requiredPermission = user.grantedPermissions.filter((permission) => permission.actions.includes(user_entity_1.PermissionAction.CREATE) &&
-                permission.resource === user_entity_1.ResourceType.USERS);
-            if (requiredPermission.length === 0) {
-                throw new common_1.ForbiddenException('You do not have permission to create users');
-            }
-        }
-        return this.usersService.create(createUserDto, userId);
     }
     async findAll(req) {
         const { userId, roles } = req.user;
@@ -211,9 +214,9 @@ let UsersController = class UsersController {
         }
         throw new common_1.ForbiddenException('You do not have permission to update this resource');
     }
-    userUpdateOwnProfile(id, updateUserDto, req) {
+    userUpdateOwnProfile(id, updateProfileDto, req) {
         if (id === req.user.userId) {
-            return this.usersService.update(id, updateUserDto);
+            return this.usersService.update(id, updateProfileDto);
         }
         throw new common_1.ForbiddenException('You do not have permission to update this resource');
     }
@@ -271,7 +274,7 @@ let UsersController = class UsersController {
     remove(id) {
         return this.usersService.remove(id);
     }
-    async updatePermissions(body, req) {
+    async updatePermissions(updatePermissionsDto, req) {
         const { userId } = req.user;
         const user = await this.usersService.findOne(userId);
         if (!user) {
@@ -284,11 +287,11 @@ let UsersController = class UsersController {
         catch {
             throw new common_1.NotFoundException('User does not have an estate');
         }
-        const userExist = usersFromEstate.find((user) => user.id === body.id);
+        const userExist = usersFromEstate.find((user) => user.id === updatePermissionsDto.id);
         if (!userExist) {
             throw new common_1.NotFoundException('User not found, Cannot access user in another estate');
         }
-        return this.userManagement.updateUserPermissions(body.id, body.permission);
+        return this.userManagement.updateUserPermissions(updatePermissionsDto.id, updatePermissionsDto.permission);
     }
     async disableTokenGeneration(id, req) {
         const superAdmin = await this.usersService.findOne(req.user.userId);
@@ -324,6 +327,25 @@ let UsersController = class UsersController {
         }
         return this.usersService.enableTokenGeneration(id);
     }
+    async registerFcmToken(registerFcmTokenDto, req) {
+        const userId = req.user.userId;
+        return this.usersService.registerFcmToken(userId, registerFcmTokenDto.fcmToken);
+    }
+    async removeFcmToken(token, req) {
+        const userId = req.user.userId;
+        return this.usersService.removeFcmToken(userId, token);
+    }
+    async updateNotificationPreferences(updatePreferencesDto, req) {
+        const userId = req.user.userId;
+        return this.usersService.updateNotificationPreferences(userId, updatePreferencesDto);
+    }
+    async getNotificationPreferences(req) {
+        const userId = req.user.userId;
+        const user = await this.usersService.findOne(userId);
+        return {
+            preferences: user.notificationPreferences || { email: true, push: true, sms: false },
+        };
+    }
 };
 exports.UsersController = UsersController;
 __decorate([
@@ -339,7 +361,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto, Object]),
+    __metadata("design:paramtypes", [create_admin_dto_1.CreateAdminDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "createAdmins", null);
 __decorate([
@@ -355,7 +377,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [create_landlord_dto_1.CreateLandlordDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "createLandLord", null);
 __decorate([
@@ -371,7 +393,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto, Object]),
+    __metadata("design:paramtypes", [create_tenant_dto_1.CreateTenantDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "createTenant", null);
 __decorate([
@@ -387,25 +409,9 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [create_security_dto_1.CreateSecurityDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "createSecurity", null);
-__decorate([
-    (0, swagger_1.ApiOperation)({
-        summary: 'Create a general user',
-        description: 'Allows Super Admins or Admins with CREATE_USERS permission to create a general user (non-admin, non-landlord, non-tenant).',
-    }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'User created successfully' }),
-    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden: Insufficient permissions' }),
-    (0, common_1.Post)('create/user'),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    (0, role_decorator_1.Roles)(user_entity_1.UserRole.SUPER_ADMIN, user_entity_1.UserRole.ADMIN),
-    __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto, Object]),
-    __metadata("design:returntype", Promise)
-], UsersController.prototype, "createUser", null);
 __decorate([
     (0, swagger_1.ApiOperation)({
         summary: 'Get all users in the estate',
@@ -461,7 +467,7 @@ __decorate([
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:paramtypes", [String, update_profile_dto_1.UpdateProfileDto, Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "userUpdateOwnProfile", null);
 __decorate([
@@ -493,7 +499,7 @@ __decorate([
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, create_user_dto_1.CreateAdminDetailsDto]),
+    __metadata("design:paramtypes", [String, Object, create_admin_dto_1.CreateAdminDetailsDto]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateUserToAdmin", null);
 __decorate([
@@ -537,7 +543,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [update_permissions_dto_1.UpdatePermissionsDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updatePermissions", null);
 __decorate([
@@ -570,11 +576,62 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "enableTokenGeneration", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'Register FCM token',
+        description: 'Register a Firebase Cloud Messaging token for push notifications',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'FCM token registered successfully' }),
+    (0, common_1.Post)('fcm-token'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [fcm_token_dto_1.RegisterFcmTokenDto, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "registerFcmToken", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'Remove FCM token',
+        description: 'Remove a Firebase Cloud Messaging token (e.g., on logout)',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'FCM token removed successfully' }),
+    (0, common_1.Delete)('fcm-token/:token'),
+    __param(0, (0, common_1.Param)('token')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "removeFcmToken", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'Update notification preferences',
+        description: 'Update user notification channel preferences',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Notification preferences updated successfully' }),
+    (0, common_1.Patch)('notification-preferences'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [fcm_token_dto_1.UpdateNotificationPreferencesDto, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "updateNotificationPreferences", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'Get notification preferences',
+        description: 'Get current user notification preferences',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Notification preferences retrieved successfully' }),
+    (0, common_1.Get)('notification-preferences/me'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getNotificationPreferences", null);
 exports.UsersController = UsersController = __decorate([
     (0, swagger_1.ApiTags)('Users'),
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('users'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard),
     __metadata("design:paramtypes", [users_service_1.UsersService,
         user_management_service_1.UserManagementService])
 ], UsersController);

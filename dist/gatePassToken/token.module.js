@@ -19,6 +19,7 @@ const users_module_1 = require("../users/users.module");
 const cloudinary_module_1 = require("../cloudinary/cloudinary.module");
 const notifications_module_1 = require("../notifications/notifications.module");
 const events_module_1 = require("../events/events.module");
+const compliance_module_1 = require("../compliance/compliance.module");
 let TokenModule = class TokenModule {
 };
 exports.TokenModule = TokenModule;
@@ -31,6 +32,7 @@ exports.TokenModule = TokenModule = __decorate([
             cloudinary_module_1.CloudinaryModule,
             notifications_module_1.NotificationsModule,
             events_module_1.EventsModule,
+            compliance_module_1.ComplianceModule,
         ],
         controllers: [token_controller_1.TokenController],
         providers: [token_service_1.TokenService, users_service_1.UsersService, mail_service_1.MailService],

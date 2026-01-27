@@ -21,6 +21,7 @@ const roles_guard_1 = require("../auth/guards/roles.guard");
 const user_entity_1 = require("../users/entities/user.entity");
 const swagger_1 = require("@nestjs/swagger");
 const role_decorator_1 = require("../auth/decorators/role.decorator");
+const verified_guard_1 = require("../auth/guards/verified.guard");
 let CloudinaryController = class CloudinaryController {
     cloudinaryService;
     constructor(cloudinaryService) {
@@ -59,7 +60,7 @@ __decorate([
 exports.CloudinaryController = CloudinaryController = __decorate([
     (0, swagger_1.ApiTags)('cloudinary'),
     (0, common_1.Controller)('cloudinary'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard, roles_guard_1.RolesGuard),
     __metadata("design:paramtypes", [cloudinary_service_1.CloudinaryService])
 ], CloudinaryController);
 //# sourceMappingURL=cloudinary.controller.js.map

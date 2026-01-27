@@ -21,7 +21,7 @@ export class VerifiedGuard implements CanActivate {
 
     if (user.type !== 'auth' || !user.isVerified) {
       throw new ForbiddenException(
-        'Please verify your email to access this resource',
+        'Your authentication is not verified',
       );
     }
 

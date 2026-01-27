@@ -35,23 +35,26 @@ let InitialSeedService = InitialSeedService_1 = class InitialSeedService {
             return;
         }
         this.logger.log('Seeding database...');
-        const estate = await this.estateModel.create({
-            name: 'Sample Estate',
-            address: '123 Sample Street',
-            city: 'Sample City',
-            state: 'Sample State',
-            country: 'Sample Country',
-            zipCode: '12345',
-            description: 'A sample estate for demonstration purposes',
-        });
         const hashedPassword = await bcrypt.hash('admin123', 10);
-        await this.userModel.create({
+        const superAdmin = await this.userModel.create({
             firstName: 'Admin',
             lastName: 'User',
             email: 'admin@example.com',
             password: hashedPassword,
             phone: '1234567890',
-            roles: [user_entity_1.UserRole.SUPER_ADMIN],
+            primaryRole: user_entity_1.UserRole.SUPER_ADMIN,
+        });
+        const estate = await this.estateModel.create({
+            owner: superAdmin._id,
+            name: 'Sample Estate',
+            location: {
+                address: '123 Sample Street',
+                city: 'Sample City',
+                state: 'Sample State',
+                country: 'Sample Country',
+            },
+            zipCode: '12345',
+            description: 'A sample estate for demonstration purposes',
         });
         const estateAdminPassword = await bcrypt.hash('estateadmin123', 10);
         await this.userModel.create({
@@ -60,7 +63,7 @@ let InitialSeedService = InitialSeedService_1 = class InitialSeedService {
             email: 'estateadmin@example.com',
             password: estateAdminPassword,
             phone: '1234567891',
-            roles: [user_entity_1.UserRole.ADMIN],
+            primaryRole: user_entity_1.UserRole.ADMIN,
             estate: estate._id,
         });
         const landlordPassword = await bcrypt.hash('landlord123', 10);
@@ -70,7 +73,7 @@ let InitialSeedService = InitialSeedService_1 = class InitialSeedService {
             email: 'landlord@example.com',
             password: landlordPassword,
             phone: '1234567892',
-            roles: [user_entity_1.UserRole.LANDLORD],
+            primaryRole: user_entity_1.UserRole.LANDLORD,
             estate: estate._id,
         });
         const tenantPassword = await bcrypt.hash('tenant123', 10);
@@ -80,7 +83,7 @@ let InitialSeedService = InitialSeedService_1 = class InitialSeedService {
             email: 'tenant@example.com',
             password: tenantPassword,
             phone: '1234567893',
-            roles: [user_entity_1.UserRole.TENANT],
+            primaryRole: user_entity_1.UserRole.TENANT,
             estate: estate._id,
         });
         const securityPassword = await bcrypt.hash('security123', 10);
@@ -90,7 +93,7 @@ let InitialSeedService = InitialSeedService_1 = class InitialSeedService {
             email: 'security@example.com',
             password: securityPassword,
             phone: '1234567894',
-            roles: [user_entity_1.UserRole.SECURITY],
+            primaryRole: user_entity_1.UserRole.SECURITY,
             estate: estate._id,
         });
         this.logger.log('Database seeding completed');

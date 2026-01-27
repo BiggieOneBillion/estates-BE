@@ -34,13 +34,18 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
     async validate(payload) {
         const user = await this.usersService.findByEmail(payload.email);
         if (!user) {
-            throw new common_1.UnauthorizedException();
+            throw new common_1.UnauthorizedException('User not found');
+        }
+        if (payload.version !== user.tokenVersion) {
+            throw new common_1.UnauthorizedException('Session expired or logged in on another device');
         }
         return {
             userId: payload.sub,
             email: payload.email,
             roles: payload.roles,
             estate: payload.estate,
+            type: payload.type,
+            isVerified: payload.isVerified,
         };
     }
 };

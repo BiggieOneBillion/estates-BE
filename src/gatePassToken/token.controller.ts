@@ -38,11 +38,12 @@ import { Roles } from 'src/auth/decorators/role.decorator';
 import { UsersService } from 'src/users/users.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 
 @ApiTags('Gate Pass Tokens')
 @ApiBearerAuth()
 @Controller('tokens')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, VerifiedGuard, RolesGuard)
 export class TokenController {
   constructor(
     private readonly tokenService: TokenService,

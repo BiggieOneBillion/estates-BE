@@ -15859,3 +15859,167 @@
 [2025-08-07T06:51:58.924Z] INFO: Body: undefined
 [2025-08-07T06:51:58.985Z] INFO: RESPONSE ⬅️ [GET] /api/users/all 304 - 64ms
 [2025-08-07T06:51:58.985Z] INFO: ------------------------------------------------------------------
+[2026-01-27T07:46:14.571Z] INFO: REQUEST STARTED ➡️ [GET] /api/swagger
+[2026-01-27T07:46:14.576Z] INFO: Body: undefined
+[2026-01-27T07:46:14.582Z] INFO: RESPONSE ⬅️ [GET] /api/swagger 404 - 12ms
+[2026-01-27T07:46:14.582Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:12:18.002Z] INFO: REQUEST STARTED ➡️ [POST] /api/api/auth/register
+[2026-01-27T16:12:18.003Z] INFO: Body: {"firstName":"wasm","lastName":"madt","email":"wasm@mail.com","password":"bakugan&!90","phone":"09037245272"}
+[2026-01-27T16:12:18.008Z] INFO: RESPONSE ⬅️ [POST] /api/api/auth/register 404 - 7ms
+[2026-01-27T16:12:18.008Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:13:24.416Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/register
+[2026-01-27T16:13:24.417Z] INFO: Body: {"firstName":"string","lastName":"string","email":"string","password":"string","phone":"string"}
+[2026-01-27T16:13:24.423Z] INFO: RESPONSE ⬅️ [POST] /api/auth/register 400 - 7ms
+[2026-01-27T16:13:24.424Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:14:38.193Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/register
+[2026-01-27T16:14:38.194Z] INFO: Body: {"firstName":"wasm","lastName":"badt","email":"wasm@mail.com","password":"bakugan&!90","phone":"09037245272"}
+[2026-01-27T16:14:38.202Z] INFO: RESPONSE ⬅️ [POST] /api/auth/register 400 - 9ms
+[2026-01-27T16:14:38.203Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:18:15.562Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/register
+[2026-01-27T16:18:15.569Z] INFO: Body: {"firstName":"test","lastName":"test","email":"t@mail.com","password":"bakuGan&!90","phone":"09037245272"}
+[2026-01-27T16:18:15.727Z] INFO: RESPONSE ⬅️ [POST] /api/auth/register 201 - 167ms
+[2026-01-27T16:18:15.728Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:21:39.070Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/verify-email
+[2026-01-27T16:21:39.072Z] INFO: Body: {"data":{"email":"t@mail.com","code":"313409"}}
+[2026-01-27T16:21:39.108Z] INFO: RESPONSE ⬅️ [POST] /api/auth/verify-email 201 - 38ms
+[2026-01-27T16:21:39.109Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:22:06.152Z] INFO: REQUEST STARTED ➡️ [GET] /api/auth/profile
+[2026-01-27T16:22:06.153Z] INFO: Body: undefined
+[2026-01-27T16:22:06.173Z] INFO: RESPONSE ⬅️ [GET] /api/auth/profile 200 - 21ms
+[2026-01-27T16:22:06.173Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:23:30.291Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/forgot-password
+[2026-01-27T16:23:30.296Z] INFO: Body: {"email":"t@mail.com"}
+[2026-01-27T16:23:34.039Z] INFO: RESPONSE ⬅️ [POST] /api/auth/forgot-password 201 - 3747ms
+[2026-01-27T16:23:34.039Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:25:09.523Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/reset-password
+[2026-01-27T16:25:09.523Z] INFO: Body: {"newPassword":"NewPassword123!"}
+[2026-01-27T16:25:09.535Z] INFO: RESPONSE ⬅️ [POST] /api/auth/reset-password 401 - 13ms
+[2026-01-27T16:25:09.535Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:27:37.544Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/verify-reset-otp
+[2026-01-27T16:27:37.547Z] INFO: Body: {"email":"t@mail.com","code":"837511"}
+[2026-01-27T16:27:37.595Z] INFO: RESPONSE ⬅️ [POST] /api/auth/verify-reset-otp 201 - 51ms
+[2026-01-27T16:27:37.595Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:27:48.051Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/reset-password
+[2026-01-27T16:27:48.052Z] INFO: Body: {"newPassword":"NewPassword123!"}
+[2026-01-27T16:27:48.062Z] INFO: RESPONSE ⬅️ [POST] /api/auth/reset-password 401 - 11ms
+[2026-01-27T16:27:48.063Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:30:43.864Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T16:30:43.867Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T16:30:44.005Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 141ms
+[2026-01-27T16:30:44.006Z] INFO: ------------------------------------------------------------------
+[2026-01-27T16:31:35.781Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T16:31:35.781Z] INFO: Body: {"email":"t@mail.com","code":"435882"}
+[2026-01-27T16:31:35.806Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 201 - 25ms
+[2026-01-27T16:31:35.806Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:00:26.714Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T17:00:26.717Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T17:00:26.946Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 232ms
+[2026-01-27T17:00:26.946Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:00:55.788Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:00:55.789Z] INFO: Body: {"email":"t@mail.com","code":"231084"}
+[2026-01-27T17:00:56.030Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 500 - 242ms
+[2026-01-27T17:00:56.031Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:01:23.201Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:01:23.202Z] INFO: Body: {"email":"t@mail.com","code":"231084"}
+[2026-01-27T17:01:23.224Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 400 - 23ms
+[2026-01-27T17:01:23.225Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:01:47.323Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T17:01:47.324Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T17:01:47.438Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 115ms
+[2026-01-27T17:01:47.438Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:02:06.212Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:02:06.212Z] INFO: Body: {"email":"t@mail.com","code":"439913"}
+[2026-01-27T17:02:06.394Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 500 - 182ms
+[2026-01-27T17:02:06.394Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:02:52.572Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T17:02:52.574Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T17:02:52.700Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 128ms
+[2026-01-27T17:02:52.701Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:03:08.639Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:03:08.639Z] INFO: Body: {"email":"t@mail.com","code":"605196"}
+[2026-01-27T17:03:08.862Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 500 - 223ms
+[2026-01-27T17:03:08.863Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:03:34.855Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T17:03:34.857Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T17:03:34.980Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 126ms
+[2026-01-27T17:03:34.980Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:03:46.898Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:03:46.899Z] INFO: Body: {"email":"t@mail.com","code":"595099"}
+[2026-01-27T17:03:47.257Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 500 - 359ms
+[2026-01-27T17:03:47.257Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:10:18.764Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:10:18.767Z] INFO: Body: {"email":"t@mail.com","code":"595099"}
+[2026-01-27T17:10:18.812Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 400 - 48ms
+[2026-01-27T17:10:18.812Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:10:25.813Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T17:10:25.814Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T17:10:25.947Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 134ms
+[2026-01-27T17:10:25.947Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:10:39.246Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:10:39.248Z] INFO: Body: {"email":"t@mail.com","code":"979635"}
+[2026-01-27T17:10:39.286Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 201 - 40ms
+[2026-01-27T17:10:39.286Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:15:30.697Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T17:15:30.704Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T17:15:30.850Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 154ms
+[2026-01-27T17:15:30.851Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:15:43.365Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:15:43.366Z] INFO: Body: {"email":"t@mail.com","code":"543489"}
+[2026-01-27T17:15:43.392Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 201 - 27ms
+[2026-01-27T17:15:43.392Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:16:49.342Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T17:16:49.345Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T17:16:49.475Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 134ms
+[2026-01-27T17:16:49.476Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:17:05.730Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:17:05.730Z] INFO: Body: {"email":"t@mail.com","code":"340144"}
+[2026-01-27T17:17:05.760Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 201 - 31ms
+[2026-01-27T17:17:05.760Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:22:57.800Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T17:22:57.803Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T17:22:57.930Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 131ms
+[2026-01-27T17:22:57.931Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:23:15.352Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:23:15.354Z] INFO: Body: {"email":"t@mail.com","code":"129705"}
+[2026-01-27T17:23:15.409Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 201 - 66ms
+[2026-01-27T17:23:15.409Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:25:40.374Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T17:25:40.377Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T17:25:40.544Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 171ms
+[2026-01-27T17:25:40.544Z] INFO: ------------------------------------------------------------------
+[2026-01-27T17:25:52.966Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T17:25:52.967Z] INFO: Body: {"email":"t@mail.com","code":"967284"}
+[2026-01-27T17:25:52.991Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 201 - 25ms
+[2026-01-27T17:25:52.992Z] INFO: ------------------------------------------------------------------
+[2026-01-27T18:45:06.640Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T18:45:06.644Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T18:45:06.917Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 277ms
+[2026-01-27T18:45:06.917Z] INFO: ------------------------------------------------------------------
+[2026-01-27T18:45:26.940Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T18:45:26.940Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T18:45:27.063Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 122ms
+[2026-01-27T18:45:27.063Z] INFO: ------------------------------------------------------------------
+[2026-01-27T18:45:55.328Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-27T18:45:55.329Z] INFO: Body: {"email":"t@mail.com","code":"142844"}
+[2026-01-27T18:45:55.357Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 201 - 38ms
+[2026-01-27T18:45:55.358Z] INFO: ------------------------------------------------------------------
+[2026-01-27T18:46:06.075Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T18:46:06.076Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T18:46:08.411Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 2336ms
+[2026-01-27T18:46:08.412Z] INFO: ------------------------------------------------------------------
+[2026-01-27T18:48:25.217Z] INFO: REQUEST STARTED ➡️ [POST] /api/users/create/security
+[2026-01-27T18:48:25.219Z] INFO: Body: {"firstName":"rty","lastName":"rty","email":"r@mail.com","phone":"09037245272","primaryRole":"security"}
+[2026-01-27T18:48:25.237Z] INFO: RESPONSE ⬅️ [POST] /api/users/create/security 401 - 20ms
+[2026-01-27T18:48:25.237Z] INFO: ------------------------------------------------------------------
+[2026-01-27T18:49:56.086Z] INFO: REQUEST STARTED ➡️ [POST] /api/users/create/security
+[2026-01-27T18:49:56.089Z] INFO: Body: {"firstName":"rty","lastName":"rty","email":"r@mail.com","phone":"09037245272","primaryRole":"security"}
+[2026-01-27T18:49:56.160Z] INFO: RESPONSE ⬅️ [POST] /api/users/create/security 403 - 75ms
+[2026-01-27T18:49:56.160Z] INFO: ------------------------------------------------------------------
+[2026-01-27T18:50:53.369Z] INFO: REQUEST STARTED ➡️ [POST] /api/users/create/security
+[2026-01-27T18:50:53.372Z] INFO: Body: {"firstName":"rty","lastName":"rty","email":"r@mail.com","phone":"09037245272","primaryRole":"security"}
+[2026-01-27T18:50:53.417Z] INFO: RESPONSE ⬅️ [POST] /api/users/create/security 403 - 48ms
+[2026-01-27T18:50:53.417Z] INFO: ------------------------------------------------------------------
+[2026-01-27T18:52:17.835Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-27T18:52:17.841Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-27T18:52:20.687Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 2852ms
+[2026-01-27T18:52:20.688Z] INFO: ------------------------------------------------------------------

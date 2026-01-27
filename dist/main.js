@@ -30,6 +30,7 @@ async function bootstrap() {
         .setTitle('Estate Management System API')
         .setDescription('API documentation for the Estate Management System')
         .setVersion('1.0')
+        .addServer('/api')
         .addBearerAuth()
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, config);

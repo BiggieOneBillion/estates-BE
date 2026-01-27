@@ -61,12 +61,14 @@ let UserManagementService = class UserManagementService {
             newAdmin = newAdminUser;
         }
         else {
+            const password = this.generateTemporaryPassword();
+            const hashedPassword = await bcrypt.hash(password, 10);
             newAdmin = new this.userModel({
                 firstName: adminData.firstName,
                 lastName: adminData.lastName,
                 email: adminData.email,
                 phone: adminData.phone,
-                password: this.generateTemporaryPassword(),
+                password: hashedPassword,
                 primaryRole: user_entity_1.UserRole.ADMIN,
                 estateId,
                 adminDetails: {
@@ -87,6 +89,11 @@ let UserManagementService = class UserManagementService {
                 isTemporaryPassword: true,
             });
             await newAdmin.save();
+            await this.mailService.accountCreationEmail({
+                to: newAdmin.email,
+                name: `${newAdmin.firstName} ${newAdmin.lastName}`,
+                password,
+            });
         }
         await this.userModel.findByIdAndUpdate(superAdminId, {
             $addToSet: { 'hierarchy.manages': newAdmin._id },
@@ -141,18 +148,20 @@ let UserManagementService = class UserManagementService {
     }
     async createTenant(landlordId, tenantData, estateId) {
         const landlord = await this.userModel.findById(landlordId);
-        if (!landlord || landlord.primaryRole !== user_entity_1.UserRole.LANDLORD) {
-            throw new common_1.ForbiddenException('Only landlords can create tenants');
+        if (!landlord) {
+            throw new common_1.BadRequestException('Landlord not found');
         }
-        if (!landlord.landlordDetails?.canCreateTenants) {
+        if (landlord.primaryRole === user_entity_1.UserRole.LANDLORD && !landlord.landlordDetails?.canCreateTenants) {
             throw new common_1.ForbiddenException('Landlord does not have permission to create tenants');
         }
+        const password = this.generateTemporaryPassword();
+        const hashedPassword = await bcrypt.hash(password, 10);
         const newTenant = new this.userModel({
             firstName: tenantData.firstName,
             lastName: tenantData.lastName,
             email: tenantData.email,
             phone: tenantData.phone,
-            password: this.generateTemporaryPassword(),
+            password: hashedPassword,
             primaryRole: user_entity_1.UserRole.TENANT,
             estateId,
             tenantDetails: {
@@ -171,30 +180,81 @@ let UserManagementService = class UserManagementService {
             isTemporaryPassword: true,
         });
         await newTenant.save();
-        await this.userModel.findByIdAndUpdate(landlordId, {
-            $addToSet: {
-                'hierarchy.manages': newTenant._id,
-                'landlordDetails.tenants': newTenant._id,
-            },
+        if (landlord.primaryRole === user_entity_1.UserRole.LANDLORD) {
+            await this.userModel.findByIdAndUpdate(landlordId, {
+                $addToSet: {
+                    'hierarchy.manages': newTenant._id,
+                    'landlordDetails.tenants': newTenant._id,
+                },
+            });
+        }
+        await this.mailService.accountCreationEmail({
+            to: newTenant.email,
+            name: `${newTenant.firstName} ${newTenant.lastName}`,
+            password,
         });
         return newTenant;
+    }
+    async createUser(creatorId, userData, estateId) {
+        const creator = await this.userModel.findById(creatorId);
+        if (!creator) {
+            throw new common_1.BadRequestException('Invalid creator ID');
+        }
+        const canCreateUser = creator.primaryRole === user_entity_1.UserRole.SUPER_ADMIN ||
+            (creator.primaryRole === user_entity_1.UserRole.ADMIN &&
+                this.hasPermission(creator, 'users', 'create'));
+        if (!canCreateUser) {
+            throw new common_1.ForbiddenException('Insufficient permissions to create user');
+        }
+        const existingUser = await this.userModel.findOne({ email: userData.email });
+        if (existingUser) {
+            throw new common_1.BadRequestException('User with this email already exists');
+        }
+        const password = userData.password || this.generateTemporaryPassword();
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = new this.userModel({
+            ...userData,
+            password: hashedPassword,
+            estateId,
+            hierarchy: {
+                createdBy: creatorId,
+                reportsTo: creatorId,
+                manages: [],
+                relationshipEstablishedAt: new Date(),
+            },
+            isTemporaryPassword: !userData.password,
+        });
+        await newUser.save();
+        await this.userModel.findByIdAndUpdate(creatorId, {
+            $addToSet: { 'hierarchy.manages': newUser._id },
+        });
+        if (newUser.primaryRole !== user_entity_1.UserRole.SUPER_ADMIN &&
+            newUser.primaryRole !== user_entity_1.UserRole.SITE_ADMIN) {
+            await this.mailService.accountCreationEmail({
+                to: newUser.email,
+                name: `${newUser.firstName} ${newUser.lastName}`,
+                password,
+            });
+        }
+        return newUser;
     }
     async createSecurity(creatorId, securityData, estateId) {
         const isSecurityAlready = await this.userModel.findOne({
             primaryRole: user_entity_1.UserRole.SECURITY,
+            estateId,
         });
         if (isSecurityAlready) {
-            throw new common_1.BadRequestException("Security already exists");
+            throw new common_1.BadRequestException('Security already exists for this estate');
         }
         const creator = await this.userModel.findById(creatorId);
         if (!creator) {
             throw new common_1.BadRequestException('Invalid creator ID');
         }
-        const canCreateLandlord = creator.primaryRole === user_entity_1.UserRole.SUPER_ADMIN ||
+        const canCreateSecurity = creator.primaryRole === user_entity_1.UserRole.SUPER_ADMIN ||
             (creator.primaryRole === user_entity_1.UserRole.ADMIN &&
                 this.hasPermission(creator, 'security', 'create'));
-        if (!canCreateLandlord) {
-            throw new common_1.ForbiddenException('Insufficient permissions to create landlord');
+        if (!canCreateSecurity) {
+            throw new common_1.ForbiddenException('Insufficient permissions to create security');
         }
         const password = this.generateTemporaryPassword();
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -329,27 +389,25 @@ let UserManagementService = class UserManagementService {
     }
     getPositionPermissions(position) {
         const positionPermissions = {
+            [user_entity_1.AdminPosition.SUPER_ADMIN]: [
+                { resource: user_entity_1.ResourceType.PROPERTIES, actions: [user_entity_1.PermissionAction.MANAGE] },
+                { resource: user_entity_1.ResourceType.MAINTENANCE, actions: [user_entity_1.PermissionAction.MANAGE] },
+            ],
             [user_entity_1.AdminPosition.FACILITY_MANAGER]: [
-                { resource: 'properties', actions: ['manage'] },
-                { resource: 'maintenance', actions: ['manage'] },
+                { resource: user_entity_1.ResourceType.PROPERTIES, actions: [user_entity_1.PermissionAction.MANAGE] },
+                { resource: user_entity_1.ResourceType.MAINTENANCE, actions: [user_entity_1.PermissionAction.MANAGE] },
             ],
             [user_entity_1.AdminPosition.SECURITY_HEAD]: [
-                { resource: 'security', actions: ['manage'] },
-                { resource: 'users', actions: ['read', 'update'] },
+                { resource: user_entity_1.ResourceType.SECURITY, actions: [user_entity_1.PermissionAction.MANAGE] },
+                { resource: user_entity_1.ResourceType.USERS, actions: [user_entity_1.PermissionAction.READ, user_entity_1.PermissionAction.UPDATE] },
             ],
             [user_entity_1.AdminPosition.FINANCE_MANAGER]: [
-                { resource: 'finances', actions: ['manage'] },
-                { resource: 'reports', actions: ['manage'] },
+                { resource: user_entity_1.ResourceType.FINANCES, actions: [user_entity_1.PermissionAction.MANAGE] },
+                { resource: user_entity_1.ResourceType.REPORTS, actions: [user_entity_1.PermissionAction.MANAGE] },
             ],
             [user_entity_1.AdminPosition.TENANT_RELATIONS]: [
-                {
-                    resource: 'tenants',
-                    actions: ['read', 'update'],
-                },
-                {
-                    resource: 'maintenance',
-                    actions: ['read', 'assign'],
-                },
+                { resource: user_entity_1.ResourceType.TENANTS, actions: [user_entity_1.PermissionAction.READ, user_entity_1.PermissionAction.UPDATE] },
+                { resource: user_entity_1.ResourceType.MAINTENANCE, actions: [user_entity_1.PermissionAction.READ, user_entity_1.PermissionAction.ASSIGN] },
             ],
             [user_entity_1.AdminPosition.MAINTENANCE_SUPERVISOR]: [],
             [user_entity_1.AdminPosition.OPERATIONS_MANAGER]: [],
@@ -367,6 +425,8 @@ let UserManagementService = class UserManagementService {
             .populate('hierarchy.createdBy', 'firstName lastName email primaryRole')
             .populate('hierarchy.reportsTo', 'firstName lastName email primaryRole')
             .populate('hierarchy.manages', 'firstName lastName email primaryRole');
+        if (!user)
+            return null;
         return {
             user: {
                 id: user._id,
@@ -381,9 +441,8 @@ let UserManagementService = class UserManagementService {
     }
     async getUsersByEstate(estateId, role) {
         const filter = { estateId };
-        if (role) {
+        if (role)
             filter.primaryRole = role;
-        }
         return this.userModel
             .find(filter)
             .select('-password -verificationToken -passwordResetToken')
@@ -393,95 +452,16 @@ let UserManagementService = class UserManagementService {
     }
     async updateUserPermissions(userId, permissions) {
         const user = await this.userModel.findById(userId);
-        if (!user) {
+        if (!user)
             throw new common_1.BadRequestException('User not found');
-        }
-        let deniedPermissions = [
-            ...(user.deniedPermissions || []),
-            ...(permissions.deniedPermissions || []),
-        ];
+        let deniedPermissions = [...(user.deniedPermissions || []), ...(permissions.deniedPermissions || [])];
         if (permissions.basePermissions) {
-            const existingBase = user.basePermissions || [];
-            const mergedBase = [...existingBase, ...permissions.basePermissions];
-            const uniqueBase = this.removeDuplicatePermissions(mergedBase);
-            user.basePermissions = this.filterOutDeniedPermissions(uniqueBase, deniedPermissions);
+            const mergedBase = [...(user.basePermissions || []), ...permissions.basePermissions];
+            user.basePermissions = this.filterOutDeniedPermissions(this.removeDuplicatePermissions(mergedBase), deniedPermissions);
         }
         if (permissions.grantedPermissions) {
-            const existingGranted = user.grantedPermissions || [];
-            const mergedGranted = [
-                ...existingGranted,
-                ...permissions.grantedPermissions,
-            ];
-            const unique = mergedGranted.reduce((acc, current) => {
-                const existing = acc.find((item) => item.resource === current.resource);
-                if (existing) {
-                    const uniqueActions = new Set([
-                        ...existing.actions,
-                        ...current.actions,
-                    ]);
-                    existing.actions = Array.from(uniqueActions);
-                    if (current.conditions) {
-                        const uniqueConditions = new Set([
-                            ...(existing.conditions || []),
-                            ...current.conditions,
-                        ]);
-                        existing.conditions = Array.from(uniqueConditions);
-                    }
-                    return acc;
-                }
-                acc.push(current);
-                return acc;
-            }, []);
-            user.grantedPermissions = unique;
-        }
-        if (permissions.grantedPermissions) {
-            deniedPermissions = deniedPermissions
-                .map((denied) => {
-                const matchingGranted = permissions.grantedPermissions.find((granted) => granted.resource === denied.resource);
-                if (matchingGranted) {
-                    const remainingDeniedActions = denied.actions.filter((action) => !matchingGranted.actions.includes(action));
-                    if (remainingDeniedActions.length === 0) {
-                        return null;
-                    }
-                    return {
-                        ...denied,
-                        actions: remainingDeniedActions,
-                    };
-                }
-                return denied;
-            })
-                .filter((permission) => permission !== null);
-            user.deniedPermissions =
-                this.removeDuplicatePermissions(deniedPermissions);
-        }
-        if (permissions.deniedPermissions) {
-            const unique = deniedPermissions.reduce((acc, current) => {
-                const existing = acc.find((item) => item.resource === current.resource);
-                if (existing) {
-                    const uniqueActions = new Set([
-                        ...existing.actions,
-                        ...current.actions,
-                    ]);
-                    existing.actions = Array.from(uniqueActions);
-                    if (current.conditions) {
-                        const uniqueConditions = new Set([
-                            ...(existing.conditions || []),
-                            ...current.conditions,
-                        ]);
-                        existing.conditions = Array.from(uniqueConditions);
-                    }
-                    return acc;
-                }
-                acc.push(current);
-                return acc;
-            }, []);
-            user.deniedPermissions = unique;
-            if (!permissions.basePermissions && user.basePermissions) {
-                user.basePermissions = this.filterOutDeniedPermissions(user.basePermissions, user.deniedPermissions);
-            }
-            if (!permissions.grantedPermissions && user.grantedPermissions) {
-                user.grantedPermissions = this.filterOutDeniedPermissions(user.grantedPermissions, user.deniedPermissions);
-            }
+            const mergedGranted = [...(user.grantedPermissions || []), ...permissions.grantedPermissions];
+            user.grantedPermissions = this.removeDuplicatePermissions(mergedGranted);
         }
         await user.save();
         return user;
@@ -489,35 +469,13 @@ let UserManagementService = class UserManagementService {
     removeDuplicatePermissions(permissions) {
         const uniqueMap = new Map();
         permissions.forEach((permission) => {
-            const key = `${permission.resource}-${permission.actions.sort().join(',')}-${(permission.conditions || []).sort().join(',')}`;
+            const key = `${permission.resource}-${(permission.actions || []).sort().join(',')}`;
             uniqueMap.set(key, permission);
         });
         return Array.from(uniqueMap.values());
     }
-    arraysHaveOverlap(arr1, arr2) {
-        return arr1.some((item) => arr2.includes(item));
-    }
-    subtractArrays(arr1, arr2) {
-        return arr1.filter((item) => !arr2.includes(item));
-    }
-    filterOutDeniedPermissions(permissions, deniedPermissions) {
-        return permissions
-            .map((permission) => {
-            const matchingDenied = deniedPermissions.filter((denied) => denied.resource === permission.resource);
-            let allowedActions = [...permission.actions];
-            for (const denied of matchingDenied) {
-                const conditionsOverlap = !denied.conditions?.length ||
-                    !permission.conditions?.length ||
-                    this.arraysHaveOverlap(denied.conditions, permission.conditions);
-                if (conditionsOverlap) {
-                    allowedActions = this.subtractArrays(allowedActions, denied.actions);
-                }
-            }
-            return allowedActions.length
-                ? { ...permission, actions: allowedActions }
-                : null;
-        })
-            .filter(Boolean);
+    filterOutDeniedPermissions(permissions, denied) {
+        return permissions.filter(p => !denied.some(d => d.resource === p.resource));
     }
 };
 exports.UserManagementService = UserManagementService;

@@ -17,8 +17,16 @@ const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
 const login_dto_1 = require("./dto/login.dto");
 const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
+const verified_guard_1 = require("./guards/verified.guard");
 const swagger_1 = require("@nestjs/swagger");
 const register_dto_1 = require("./dto/register.dto");
+const verify_login_dto_1 = require("./dto/verify-login.dto");
+const verify_email_dto_1 = require("./dto/verify-email.dto");
+const forgot_password_dto_1 = require("./dto/forgot-password.dto");
+const verify_reset_otp_dto_1 = require("./dto/verify-reset-otp.dto");
+const reset_password_dto_1 = require("./dto/reset-password.dto");
+const verify_login_response_dto_1 = require("./dto/verify-login-response.dto");
+const verify_preauth_dto_1 = require("./dto/verify-preauth.dto");
 let AuthController = class AuthController {
     authService;
     constructor(authService) {
@@ -29,26 +37,27 @@ let AuthController = class AuthController {
         const isMobile = /mobile/i.test(userAgent);
         return this.authService.login(loginDto, isMobile);
     }
-    async VerifyLoginEmail(body) {
-        return this.authService.validateUserEmailLogin({
-            email: body.email,
-            code: body.code,
-        });
+    async VerifyLoginEmail(verifyLoginDto) {
+        return this.authService.validateUserEmailLogin(verifyLoginDto);
     }
     async Register(registerDto) {
+        console.log(registerDto);
         return this.authService.register(registerDto);
     }
-    async VerifyRegistrationEmail(body) {
-        return this.authService.verifyEmail(body.data);
+    async verifyPreAuth(verifyPreAuthDto, req) {
+        return this.authService.verifyPreAuth(verifyPreAuthDto, req.user);
+    }
+    async VerifyRegistrationEmail(verifyEmailDto) {
+        return this.authService.verifyEmail(verifyEmailDto.data);
     }
     getProfile(req) {
         return req.user;
     }
-    async requestPasswordReset(body) {
-        return this.authService.sendPasswordResetOTP(body.email);
+    async requestPasswordReset(forgotPasswordDto) {
+        return this.authService.sendPasswordResetOTP(forgotPasswordDto.email);
     }
-    async verifyPasswordResetOTP(body, res) {
-        const { token } = await this.authService.verifyPasswordResetOTP(body.email, body.code);
+    async verifyPasswordResetOTP(verifyResetOtpDto, res) {
+        const { token } = await this.authService.verifyPasswordResetOTP(verifyResetOtpDto.email, verifyResetOtpDto.code);
         res.cookie('reset_token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -59,12 +68,12 @@ let AuthController = class AuthController {
             message: 'OTP verified successfully. You can now reset your password.',
         };
     }
-    async resetPassword(body, req, res) {
+    async resetPassword(resetPasswordDto, req, res) {
         const resetToken = req.cookies?.reset_token;
         if (!resetToken) {
             throw new common_1.UnauthorizedException('Reset token is missing or expired');
         }
-        await this.authService.resetPassword(resetToken, body.newPassword);
+        await this.authService.resetPassword(resetToken, resetPasswordDto.newPassword);
         res.clearCookie('reset_token');
         return { message: 'Password has been reset successfully' };
     }
@@ -91,13 +100,14 @@ __decorate([
     }),
     (0, swagger_1.ApiResponse)({
         status: 200,
-        description: 'Login email verification successful',
+        description: 'Login email verification successful and returns user tokens.',
+        type: verify_login_response_dto_1.VerifyLoginResponseDto,
     }),
     (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid or expired OTP' }),
     (0, common_1.Post)('login/verify'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [verify_login_dto_1.VerifyLoginDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "VerifyLoginEmail", null);
 __decorate([
@@ -115,6 +125,25 @@ __decorate([
 ], AuthController.prototype, "Register", null);
 __decorate([
     (0, swagger_1.ApiOperation)({
+        summary: 'Verify pre-auth session (email verification or multi-device)',
+        description: 'Resolves pre-auth status using a 6-digit code. Handles email verification and device switching.',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Pre-auth resolved successfully, returns full auth token.',
+        type: verify_login_response_dto_1.VerifyLoginResponseDto,
+    }),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('verify-preauth'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [verify_preauth_dto_1.VerifyPreAuthDto, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "verifyPreAuth", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({
         summary: 'Verify registration email',
         description: 'Verifies the email address using the code sent during registration.',
     }),
@@ -125,7 +154,7 @@ __decorate([
     (0, common_1.Post)('verify-email'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [verify_email_dto_1.VerifyEmailDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "VerifyRegistrationEmail", null);
 __decorate([
@@ -136,7 +165,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Profile retrieved successfully' }),
     (0, swagger_1.ApiResponse)({ status: 401, description: 'Unauthorized' }),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard),
     (0, common_1.Get)('profile'),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -148,12 +177,12 @@ __decorate([
         summary: 'Request password reset',
         description: 'Sends a password reset code to the provided email address.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Password reset OTP sent' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Password reset OTP sent successfully' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'User not found' }),
     (0, common_1.Post)('forgot-password'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [forgot_password_dto_1.ForgotPasswordDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "requestPasswordReset", null);
 __decorate([
@@ -167,7 +196,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [verify_reset_otp_dto_1.VerifyResetOtpDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verifyPasswordResetOTP", null);
 __decorate([
@@ -182,7 +211,7 @@ __decorate([
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Object]),
+    __metadata("design:paramtypes", [reset_password_dto_1.ResetPasswordDto, Object, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "resetPassword", null);
 exports.AuthController = AuthController = __decorate([

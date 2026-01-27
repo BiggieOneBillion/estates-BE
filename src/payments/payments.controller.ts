@@ -22,11 +22,12 @@ import { InitializePaymentDto } from './dto/initialize-payment.dto';
 import { PaystackService } from './paystack.service';
 import { LeviesService } from '../levies/levies.service';
 import { ObjectId } from 'mongoose';
+import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 
 @ApiTags('Payments')
 @ApiBearerAuth()
 @Controller('payments')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, VerifiedGuard)
 export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,

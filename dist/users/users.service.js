@@ -26,86 +26,6 @@ let UsersService = class UsersService {
         this.userModel = userModel;
         this.mailService = mailService;
     }
-    async create(createUserDto, creator) {
-        const existingUser = await this.userModel.findOne({
-            email: createUserDto.email,
-        });
-        if (existingUser) {
-            throw new common_1.ConflictException('Email already exists');
-        }
-        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-        const newUser = createUserDto.primaryRole === user_entity_1.UserRole.ADMIN
-            ? new this.userModel({
-                ...createUserDto,
-                password: hashedPassword,
-                adminDetails: {
-                    ...createUserDto.adminDetails,
-                    positionPermissions: this.getPositionPermissions(createUserDto.adminDetails?.position),
-                    appointedAt: new Date(),
-                    appointedBy: creator,
-                    hierarchy: {
-                        createdBy: creator,
-                        reportsTo: creator,
-                        manages: [],
-                        relationshipEstablishedAt: new Date(),
-                    },
-                    isTemporaryPassword: true,
-                },
-            })
-            : new this.userModel({
-                ...createUserDto,
-                password: hashedPassword,
-            });
-        if (createUserDto.primaryRole !== user_entity_1.UserRole.SUPER_ADMIN &&
-            createUserDto.primaryRole !== user_entity_1.UserRole.SITE_ADMIN) {
-            await this.mailService.accountCreationEmail({
-                to: createUserDto.email,
-                name: createUserDto.firstName,
-                password: createUserDto.password,
-            });
-        }
-        return newUser.save();
-    }
-    getPositionPermissions(position) {
-        const positionPermissions = {
-            [user_entity_1.AdminPosition.FACILITY_MANAGER]: [
-                { resource: 'properties', actions: ['manage'] },
-                { resource: 'maintenance', actions: ['manage'] },
-            ],
-            [user_entity_1.AdminPosition.SECURITY_HEAD]: [
-                { resource: 'security', actions: ['manage'] },
-                { resource: 'users', actions: ['read', 'update'] },
-            ],
-            [user_entity_1.AdminPosition.FINANCE_MANAGER]: [
-                { resource: 'finances', actions: ['manage'] },
-                { resource: 'reports', actions: ['manage'] },
-            ],
-            [user_entity_1.AdminPosition.TENANT_RELATIONS]: [
-                {
-                    resource: 'tenants',
-                    actions: ['read', 'update'],
-                },
-                {
-                    resource: 'maintenance',
-                    actions: ['read', 'assign'],
-                },
-            ],
-            [user_entity_1.AdminPosition.MAINTENANCE_SUPERVISOR]: [
-                { resource: 'properties', actions: ['manage'] },
-                { resource: 'maintenance', actions: ['manage'] },
-            ],
-            [user_entity_1.AdminPosition.OPERATIONS_MANAGER]: [
-                { resource: 'operations', actions: ['manage'] },
-                { resource: 'maintenance', actions: ['manage'] },
-            ],
-            [user_entity_1.AdminPosition.PROPERTY_MANAGER]: [
-                { resource: 'properties', actions: ['manage'] },
-                { resource: 'maintenance', actions: ['manage'] },
-            ],
-            [user_entity_1.AdminPosition.CUSTOM]: [],
-        };
-        return positionPermissions[position] || [];
-    }
     async findAll() {
         return this.userModel.find().exec();
     }
@@ -168,6 +88,44 @@ let UsersService = class UsersService {
             message: `Token generation enabled for ${updatedUser?.firstName} ${updatedUser?.lastName}`,
             user: updatedUser,
         };
+    }
+    async registerFcmToken(userId, fcmToken) {
+        const user = await this.findOne(userId);
+        if (!user.fcmTokens) {
+            user.fcmTokens = [];
+        }
+        if (!user.fcmTokens.includes(fcmToken)) {
+            user.fcmTokens.push(fcmToken);
+            await user.save();
+        }
+        return user;
+    }
+    async removeFcmToken(userId, fcmToken) {
+        const user = await this.findOne(userId);
+        if (user.fcmTokens) {
+            user.fcmTokens = user.fcmTokens.filter(token => token !== fcmToken);
+            await user.save();
+        }
+        return user;
+    }
+    async updateNotificationPreferences(userId, preferences) {
+        const user = await this.findOne(userId);
+        const currentPrefs = user.notificationPreferences || { email: true, push: true, sms: false };
+        user.notificationPreferences = {
+            email: preferences.email !== undefined ? preferences.email : currentPrefs.email,
+            push: preferences.push !== undefined ? preferences.push : currentPrefs.push,
+            sms: preferences.sms !== undefined ? preferences.sms : currentPrefs.sms,
+        };
+        await user.save();
+        return user;
+    }
+    async findByEstateAndRoles(estateId, roles) {
+        return this.userModel
+            .find({
+            estateId,
+            primaryRole: { $in: roles },
+        })
+            .exec();
     }
 };
 exports.UsersService = UsersService;

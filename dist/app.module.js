@@ -13,6 +13,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const event_emitter_1 = require("@nestjs/event-emitter");
 const throttler_1 = require("@nestjs/throttler");
+const schedule_1 = require("@nestjs/schedule");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const auth_module_1 = require("./auth/auth.module");
@@ -31,6 +32,9 @@ const token_module_1 = require("./gatePassToken/token.module");
 const cloudinary_module_1 = require("./cloudinary/cloudinary.module");
 const notifications_module_1 = require("./notifications/notifications.module");
 const events_module_1 = require("./events/events.module");
+const levies_module_1 = require("./levies/levies.module");
+const payments_module_1 = require("./payments/payments.module");
+const compliance_module_1 = require("./compliance/compliance.module");
 let AppModule = class AppModule {
     initialSeedService;
     constructor(initialSeedService) {
@@ -55,6 +59,7 @@ exports.AppModule = AppModule = __decorate([
                 envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
             }),
             event_emitter_1.EventEmitterModule.forRoot(),
+            schedule_1.ScheduleModule.forRoot(),
             throttler_1.ThrottlerModule.forRoot([{
                     ttl: 60000,
                     limit: 10,
@@ -79,6 +84,9 @@ exports.AppModule = AppModule = __decorate([
             cloudinary_module_1.CloudinaryModule,
             notifications_module_1.NotificationsModule,
             events_module_1.EventsModule,
+            levies_module_1.LeviesModule,
+            payments_module_1.PaymentsModule,
+            compliance_module_1.ComplianceModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService, initial_seeds_1.InitialSeedService, mail_service_1.MailService],

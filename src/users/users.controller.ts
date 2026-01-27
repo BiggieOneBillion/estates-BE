@@ -43,11 +43,12 @@ import { CreateAdminDto, CreateAdminDetailsDto } from './dto/create-admin.dto';
 import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePermissionsDto } from './dto/update-permissions.dto';
+import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, VerifiedGuard)
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,

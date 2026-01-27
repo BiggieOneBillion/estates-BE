@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CreateSecurityUserDto = exports.CreateTenantUserDto = exports.CreateLandlordUserDto = exports.CreateAdminUserDto = exports.CreateUserDto = exports.CreateRoleHierarchyDto = exports.CreateLandlordDetailsDto = exports.CreateTenantDetailsDto = exports.CreateSecurityDetailsDto = exports.CreateAdminDetailsDto = exports.CreatePermissionDto = void 0;
+exports.CreateUserDto = exports.CreateRoleHierarchyDto = exports.CreatePermissionDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 const swagger_1 = require("@nestjs/swagger");
@@ -47,187 +47,6 @@ __decorate([
     (0, class_validator_1.IsString)({ each: true }),
     __metadata("design:type", Array)
 ], CreatePermissionDto.prototype, "conditions", void 0);
-class CreateAdminDetailsDto {
-    position;
-    customPositionTitle;
-    department;
-    positionPermissions;
-    additionalPermissions;
-    appointedBy;
-    notes;
-}
-exports.CreateAdminDetailsDto = CreateAdminDetailsDto;
-__decorate([
-    (0, swagger_1.ApiProperty)({ enum: user_entity_1.AdminPosition, description: 'Admin position' }),
-    (0, class_validator_1.IsEnum)(user_entity_1.AdminPosition),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], CreateAdminDetailsDto.prototype, "position", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Custom position title (required if position is CUSTOM)' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(100),
-    __metadata("design:type", String)
-], CreateAdminDetailsDto.prototype, "customPositionTitle", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Department name' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(100),
-    __metadata("design:type", String)
-], CreateAdminDetailsDto.prototype, "department", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        type: [CreatePermissionDto],
-        description: 'Position-specific permissions',
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsArray)(),
-    (0, class_validator_1.ValidateNested)({ each: true }),
-    (0, class_transformer_1.Type)(() => CreatePermissionDto),
-    __metadata("design:type", Array)
-], CreateAdminDetailsDto.prototype, "positionPermissions", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        type: [CreatePermissionDto],
-        description: 'Additional permissions granted',
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsArray)(),
-    (0, class_validator_1.ValidateNested)({ each: true }),
-    (0, class_transformer_1.Type)(() => CreatePermissionDto),
-    __metadata("design:type", Array)
-], CreateAdminDetailsDto.prototype, "additionalPermissions", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'MongoDB ObjectId of the user who appointed this admin' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsMongoId)(),
-    __metadata("design:type", String)
-], CreateAdminDetailsDto.prototype, "appointedBy", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Notes about this admin role' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(500),
-    __metadata("design:type", String)
-], CreateAdminDetailsDto.prototype, "notes", void 0);
-class CreateSecurityDetailsDto {
-    badgeNumber;
-    shift;
-    assignedAreas;
-    supervisorId;
-}
-exports.CreateSecurityDetailsDto = CreateSecurityDetailsDto;
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Security badge number' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(50),
-    __metadata("design:type", String)
-], CreateSecurityDetailsDto.prototype, "badgeNumber", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Work shift' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(50),
-    __metadata("design:type", String)
-], CreateSecurityDetailsDto.prototype, "shift", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        type: [String],
-        description: 'Areas assigned to this security personnel',
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsArray)(),
-    (0, class_validator_1.IsString)({ each: true }),
-    __metadata("design:type", Array)
-], CreateSecurityDetailsDto.prototype, "assignedAreas", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'MongoDB ObjectId of supervisor' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsMongoId)(),
-    __metadata("design:type", String)
-], CreateSecurityDetailsDto.prototype, "supervisorId", void 0);
-class CreateTenantDetailsDto {
-    landlordId;
-    propertyUnit;
-    leaseStartDate;
-    leaseEndDate;
-    tenancyStatus;
-}
-exports.CreateTenantDetailsDto = CreateTenantDetailsDto;
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: 'MongoDB ObjectId of the landlord' }),
-    (0, class_validator_1.IsMongoId)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], CreateTenantDetailsDto.prototype, "landlordId", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Property unit identifier' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(100),
-    __metadata("design:type", String)
-], CreateTenantDetailsDto.prototype, "propertyUnit", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Lease start date' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsDateString)(),
-    __metadata("design:type", String)
-], CreateTenantDetailsDto.prototype, "leaseStartDate", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Lease end date' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsDateString)(),
-    __metadata("design:type", String)
-], CreateTenantDetailsDto.prototype, "leaseEndDate", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Tenancy status', default: 'active' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(50),
-    __metadata("design:type", String)
-], CreateTenantDetailsDto.prototype, "tenancyStatus", void 0);
-class CreateLandlordDetailsDto {
-    ownedProperties;
-    tenants;
-    canCreateTenants;
-    isEligibleForAdmin;
-}
-exports.CreateLandlordDetailsDto = CreateLandlordDetailsDto;
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        type: [String],
-        description: 'Property IDs or unit numbers owned',
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsArray)(),
-    (0, class_validator_1.IsString)({ each: true }),
-    __metadata("design:type", Array)
-], CreateLandlordDetailsDto.prototype, "ownedProperties", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        type: [String],
-        description: 'MongoDB ObjectIds of tenants under this landlord',
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsArray)(),
-    (0, class_validator_1.IsMongoId)({ each: true }),
-    __metadata("design:type", Array)
-], CreateLandlordDetailsDto.prototype, "tenants", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Can create tenant accounts', default: false }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsBoolean)(),
-    __metadata("design:type", Boolean)
-], CreateLandlordDetailsDto.prototype, "canCreateTenants", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Eligible for admin promotion', default: false }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsBoolean)(),
-    __metadata("design:type", Boolean)
-], CreateLandlordDetailsDto.prototype, "isEligibleForAdmin", void 0);
 class CreateRoleHierarchyDto {
     createdBy;
     reportsTo;
@@ -270,10 +89,6 @@ class CreateUserDto {
     isEmailVerified;
     verificationToken;
     isTemporaryPassword;
-    adminDetails;
-    landlordDetails;
-    tenantDetails;
-    securityDetails;
     hierarchy;
     grantedPermissions;
     deniedPermissions;
@@ -379,34 +194,6 @@ __decorate([
     __metadata("design:type", Boolean)
 ], CreateUserDto.prototype, "isTemporaryPassword", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ type: CreateAdminDetailsDto, description: 'Admin-specific details' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.ValidateNested)(),
-    (0, class_transformer_1.Type)(() => CreateAdminDetailsDto),
-    __metadata("design:type", CreateAdminDetailsDto)
-], CreateUserDto.prototype, "adminDetails", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ type: CreateLandlordDetailsDto, description: 'Landlord-specific details' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.ValidateNested)(),
-    (0, class_transformer_1.Type)(() => CreateLandlordDetailsDto),
-    __metadata("design:type", CreateLandlordDetailsDto)
-], CreateUserDto.prototype, "landlordDetails", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ type: CreateTenantDetailsDto, description: 'Tenant-specific details' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.ValidateNested)(),
-    (0, class_transformer_1.Type)(() => CreateTenantDetailsDto),
-    __metadata("design:type", CreateTenantDetailsDto)
-], CreateUserDto.prototype, "tenantDetails", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ type: CreateSecurityDetailsDto, description: 'Security-specific details' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.ValidateNested)(),
-    (0, class_transformer_1.Type)(() => CreateSecurityDetailsDto),
-    __metadata("design:type", CreateSecurityDetailsDto)
-], CreateUserDto.prototype, "securityDetails", void 0);
-__decorate([
     (0, swagger_1.ApiPropertyOptional)({ type: CreateRoleHierarchyDto, description: 'Role hierarchy information (optional for SUPER_ADMIN)' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.ValidateNested)(),
@@ -454,63 +241,4 @@ __decorate([
     (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
 ], CreateUserDto.prototype, "metadata", void 0);
-class CreateAdminUserDto extends CreateUserDto {
-}
-exports.CreateAdminUserDto = CreateAdminUserDto;
-__decorate([
-    (0, swagger_1.ApiProperty)({ enum: user_entity_1.UserRole, description: 'Must be admin role' }),
-    __metadata("design:type", String)
-], CreateAdminUserDto.prototype, "primaryRole", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ type: CreateAdminDetailsDto, description: 'Admin details (auto-generated for SUPER_ADMIN if not provided)' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.ValidateNested)(),
-    (0, class_transformer_1.Type)(() => CreateAdminDetailsDto),
-    __metadata("design:type", CreateAdminDetailsDto)
-], CreateAdminUserDto.prototype, "adminDetails", void 0);
-class CreateLandlordUserDto extends CreateUserDto {
-}
-exports.CreateLandlordUserDto = CreateLandlordUserDto;
-__decorate([
-    (0, swagger_1.ApiProperty)({ enum: user_entity_1.UserRole, description: 'Must be landlord role' }),
-    (0, class_validator_1.IsEnum)([user_entity_1.UserRole.LANDLORD]),
-    __metadata("design:type", String)
-], CreateLandlordUserDto.prototype, "primaryRole", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ type: CreateLandlordDetailsDto, description: 'Landlord details' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.ValidateNested)(),
-    (0, class_transformer_1.Type)(() => CreateLandlordDetailsDto),
-    __metadata("design:type", CreateLandlordDetailsDto)
-], CreateLandlordUserDto.prototype, "landlordDetails", void 0);
-class CreateTenantUserDto extends CreateUserDto {
-}
-exports.CreateTenantUserDto = CreateTenantUserDto;
-__decorate([
-    (0, swagger_1.ApiProperty)({ enum: user_entity_1.UserRole, description: 'Must be tenant role' }),
-    (0, class_validator_1.IsEnum)([user_entity_1.UserRole.TENANT]),
-    __metadata("design:type", String)
-], CreateTenantUserDto.prototype, "primaryRole", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ type: CreateTenantDetailsDto, description: 'Tenant details are required' }),
-    (0, class_validator_1.ValidateNested)(),
-    (0, class_transformer_1.Type)(() => CreateTenantDetailsDto),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", CreateTenantDetailsDto)
-], CreateTenantUserDto.prototype, "tenantDetails", void 0);
-class CreateSecurityUserDto extends CreateUserDto {
-}
-exports.CreateSecurityUserDto = CreateSecurityUserDto;
-__decorate([
-    (0, swagger_1.ApiProperty)({ enum: user_entity_1.UserRole, description: 'Must be security role' }),
-    (0, class_validator_1.IsEnum)([user_entity_1.UserRole.SECURITY]),
-    __metadata("design:type", String)
-], CreateSecurityUserDto.prototype, "primaryRole", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ type: CreateSecurityDetailsDto, description: 'Security details' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.ValidateNested)(),
-    (0, class_transformer_1.Type)(() => CreateSecurityDetailsDto),
-    __metadata("design:type", CreateSecurityDetailsDto)
-], CreateSecurityUserDto.prototype, "securityDetails", void 0);
 //# sourceMappingURL=create-user.dto.js.map

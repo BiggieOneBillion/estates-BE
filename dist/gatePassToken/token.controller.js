@@ -26,6 +26,7 @@ const role_decorator_1 = require("../auth/decorators/role.decorator");
 const users_service_1 = require("../users/users.service");
 const platform_express_1 = require("@nestjs/platform-express");
 const cloudinary_service_1 = require("../cloudinary/cloudinary.service");
+const verified_guard_1 = require("../auth/guards/verified.guard");
 let TokenController = class TokenController {
     tokenService;
     userService;
@@ -258,7 +259,7 @@ exports.TokenController = TokenController = __decorate([
     (0, swagger_1.ApiTags)('Gate Pass Tokens'),
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('tokens'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard, roles_guard_1.RolesGuard),
     __metadata("design:paramtypes", [token_service_1.TokenService,
         users_service_1.UsersService,
         cloudinary_service_1.CloudinaryService])
