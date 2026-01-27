@@ -60,6 +60,8 @@ export class AuthService {
         roles: user.primaryRole as UserRole,
         type: 'pre-auth',
         isVerified: false,
+        reason: 'unverified_email',
+        version: user.tokenVersion,
         // estate: user.estate,
       };
 
@@ -86,6 +88,8 @@ export class AuthService {
         roles: user.primaryRole as UserRole,
         type: 'pre-auth',
         isVerified: false,
+        reason: 'active_on_another_device',
+        version: user.tokenVersion,
         // estate: user.estate,
       };
 
@@ -166,6 +170,10 @@ export class AuthService {
       throw new BadRequestException('Invalid credentials');
     }
 
+
+    // Update user isActive to true
+    user.isActive = true;
+
     // Update last login timestamp and verificationToken
     user.lastLogin = new Date();
     user.verificationToken = null;
@@ -178,6 +186,7 @@ export class AuthService {
       roles: user.primaryRole as UserRole,
       type: 'auth',
       isVerified: true,
+      version: user.tokenVersion,
       // estate: user.estate,
     };
 
@@ -256,6 +265,7 @@ export class AuthService {
       roles: user.roles,
       type: 'auth',
       isVerified: false, // Registration still needs email verification
+      version: 0, // Initial version
       estate: user.estate,
     };
 
@@ -296,6 +306,61 @@ export class AuthService {
     return {
       message: 'Email Verification Successful',
       status: 200,
+    };
+  }
+
+  async verifyPreAuth(info: { email: string; code: string }, payload: JwtPayload) {
+    const { email, code } = info;
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if ((user._id as any).toString() !== payload.sub) {
+      throw new UnauthorizedException('Identity mismatch');
+    }
+
+    if (code !== user.verificationToken) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    if (payload.reason === 'unverified_email') {
+      user.isEmailVerified = true;
+    } else if (payload.reason === 'active_on_another_device') {
+      // Increment version to invalidate all current tokens
+      user.tokenVersion += 1;
+      
+      // Notify user of device change
+      await this.mailService.sendBasicEmail(
+        user.email,
+        'Security Alert: New Device Login',
+        `Hello ${user.firstName}, you have successfully switched your active session to a new device. Previous sessions have been logged out for your security.`,
+      );
+    }
+
+    user.isActive = true;
+    user.lastLogin = new Date();
+    user.verificationToken = null;
+    await user.save();
+
+    const newPayload: JwtPayload = {
+      sub: user._id as string,
+      email: user.email,
+      roles: user.primaryRole as UserRole,
+      type: 'auth',
+      isVerified: true,
+      version: user.tokenVersion,
+      // estate: user.estate,
+    };
+
+    const userInstance = plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
+
+    return {
+      user: userInstance,
+      access_token: this.jwtService.sign(newPayload),
     };
   }
 

@@ -28,6 +28,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyLoginResponseDto } from './dto/verify-login-response.dto';
+import { VerifyPreAuthDto } from './dto/verify-preauth.dto';
 import { Response } from 'express';
 import { request } from 'http';
 
@@ -80,6 +81,22 @@ export class AuthController {
   async Register(@Body() registerDto: RegisterDto) {
     console.log(registerDto);
     return this.authService.register(registerDto);
+  }
+
+  @ApiOperation({
+    summary: 'Verify pre-auth session (email verification or multi-device)',
+    description: 'Resolves pre-auth status using a 6-digit code. Handles email verification and device switching.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pre-auth resolved successfully, returns full auth token.',
+    type: VerifyLoginResponseDto,
+  })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('verify-preauth')
+  async verifyPreAuth(@Body() verifyPreAuthDto: VerifyPreAuthDto, @Request() req) {
+    return this.authService.verifyPreAuth(verifyPreAuthDto, req.user);
   }
 
   @ApiOperation({
