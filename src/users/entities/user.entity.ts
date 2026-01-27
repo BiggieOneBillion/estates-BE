@@ -359,6 +359,9 @@ export class User extends Document {
     sms: boolean;
   };
 
+  @Prop({ default: 0 })
+  tokenVersion: number;
+
   // Additional Metadata
   @Prop()
   notes?: string; // Any additional notes about this user
