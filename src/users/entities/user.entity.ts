@@ -20,6 +20,7 @@ export enum AdminPosition {
   PROPERTY_MANAGER = 'property_manager',
   TENANT_RELATIONS = 'tenant_relations',
   CUSTOM = 'custom',
+  SUPER_ADMIN = 'super_admin',
 }
 
 export enum PermissionAction {
@@ -415,7 +416,7 @@ UserSchema.pre('save', function (next) {
     // Set default admin details if not provided
     if (!this.adminDetails) {
       this.adminDetails = {
-        position: AdminPosition.OPERATIONS_MANAGER,
+        position: AdminPosition.SUPER_ADMIN,
         customPositionTitle: 'Estate Super Administrator',
         department: 'Estate Management',
         positionPermissions: [],
