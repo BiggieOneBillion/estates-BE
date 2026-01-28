@@ -16023,3 +16023,67 @@
 [2026-01-27T18:52:17.841Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
 [2026-01-27T18:52:20.687Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 2852ms
 [2026-01-27T18:52:20.688Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:43:57.453Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-28T12:43:57.464Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-28T12:44:02.627Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 5174ms
+[2026-01-28T12:44:02.628Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:45:28.618Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-28T12:45:28.620Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-28T12:45:31.572Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 2954ms
+[2026-01-28T12:45:31.573Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:48:11.789Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-28T12:48:11.798Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-28T12:48:15.129Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 3341ms
+[2026-01-28T12:48:15.129Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:49:54.524Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/verify-preauth
+[2026-01-28T12:49:54.526Z] INFO: Body: {"email":"t@mail.com","code":"550955"}
+[2026-01-28T12:49:54.604Z] INFO: RESPONSE ⬅️ [POST] /api/auth/verify-preauth 401 - 80ms
+[2026-01-28T12:49:54.604Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:52:16.299Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-28T12:52:16.302Z] INFO: Body: {"email":"t@mail.com","password":"bakuGan&!90"}
+[2026-01-28T12:52:19.344Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 3045ms
+[2026-01-28T12:52:19.344Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:53:13.127Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/verify-preauth
+[2026-01-28T12:53:13.129Z] INFO: Body: {"email":"t@mail.com","code":"110226"}
+[2026-01-28T12:53:13.204Z] INFO: RESPONSE ⬅️ [POST] /api/auth/verify-preauth 401 - 78ms
+[2026-01-28T12:53:13.205Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:54:30.382Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/verify-preauth
+[2026-01-28T12:54:30.389Z] INFO: Body: {"email":"t@mail.com","code":"110226"}
+[2026-01-28T12:54:30.473Z] INFO: RESPONSE ⬅️ [POST] /api/auth/verify-preauth 401 - 91ms
+[2026-01-28T12:54:30.473Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:55:40.995Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/verify-preauth
+[2026-01-28T12:55:41.003Z] INFO: Body: {"email":"t@mail.com","code":"110226"}
+[2026-01-28T12:55:41.045Z] INFO: RESPONSE ⬅️ [POST] /api/auth/verify-preauth 401 - 50ms
+[2026-01-28T12:55:41.046Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:57:10.056Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/verify-preauth
+[2026-01-28T12:57:10.059Z] INFO: Body: {"email":"t@mail.com","code":"110226"}
+[2026-01-28T12:57:10.202Z] INFO: RESPONSE ⬅️ [POST] /api/auth/verify-preauth 201 - 147ms
+[2026-01-28T12:57:10.202Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:58:24.285Z] INFO: REQUEST STARTED ➡️ [GET] /api/auth/profile
+[2026-01-28T12:58:24.288Z] INFO: Body: undefined
+[2026-01-28T12:58:24.379Z] INFO: RESPONSE ⬅️ [GET] /api/auth/profile 403 - 94ms
+[2026-01-28T12:58:24.379Z] INFO: ------------------------------------------------------------------
+[2026-01-28T12:59:08.548Z] INFO: REQUEST STARTED ➡️ [GET] /api/auth/profile
+[2026-01-28T12:59:08.552Z] INFO: Body: undefined
+[2026-01-28T12:59:08.663Z] INFO: RESPONSE ⬅️ [GET] /api/auth/profile 200 - 115ms
+[2026-01-28T12:59:08.663Z] INFO: ------------------------------------------------------------------
+[2026-01-28T13:04:34.883Z] INFO: REQUEST STARTED ➡️ [POST] /api/users/create/admin
+[2026-01-28T13:04:34.887Z] INFO: Body: {"firstName":"james","lastName":"strong","email":"sj@mail.com","password":"1q2w3e4r5tYu!&","phone":"09037245272","primaryRole":"admin","adminDetails":{"position":"property_manager","customPositionTitle":"PT","department":"Property","positionPermissions":[{"resource":"users","actions":["create"],"conditions":["string"]}],"additionalPermissions":[{"resource":"users","actions":["create"],"conditions":["string"]}],"appointedBy":"string","notes":"string"}}
+[2026-01-28T13:04:34.952Z] INFO: RESPONSE ⬅️ [POST] /api/users/create/admin 400 - 69ms
+[2026-01-28T13:04:34.952Z] INFO: ------------------------------------------------------------------
+[2026-01-28T13:07:26.622Z] INFO: REQUEST STARTED ➡️ [POST] /api/users/create/admin
+[2026-01-28T13:07:26.629Z] INFO: Body: {"firstName":"james","lastName":"strong","email":"sj@mail.com","password":"1q2w3e4r5tYu!&","phone":"09037245272","primaryRole":"admin"}
+[2026-01-28T13:07:26.726Z] INFO: RESPONSE ⬅️ [POST] /api/users/create/admin 500 - 104ms
+[2026-01-28T13:07:26.726Z] INFO: ------------------------------------------------------------------
+[2026-01-28T13:09:06.205Z] INFO: REQUEST STARTED ➡️ [POST] /api/users/create/admin
+[2026-01-28T13:09:06.209Z] INFO: Body: {"firstName":"james","lastName":"strong","email":"sj@mail.com","password":"1q2w3e4r5tYu!&","phone":"09037245272","primaryRole":"admin","adminDetails":{"position":"property_manager","customPositionTitle":"PT","department":"Property"}}
+[2026-01-28T13:09:06.259Z] INFO: RESPONSE ⬅️ [POST] /api/users/create/admin 500 - 54ms
+[2026-01-28T13:09:06.259Z] INFO: ------------------------------------------------------------------
+[2026-01-28T13:10:23.583Z] INFO: REQUEST STARTED ➡️ [POST] /api/estates/create
+[2026-01-28T13:10:23.586Z] INFO: Body: {"name":"Greenwood Estate","location":{"address":"123 Estate Road","city":"Lagos","state":"Lagos State","country":"Nigeria","coordinates":{"lat":6.5244,"lng":3.3792}},"supportingDocuments":[{"filename":"deed.pdf","fileType":"application/pdf","url":"https://cdn.example.com/files/deed.pdf","uploadedAt":"2026-01-28T13:10:14.279Z"}],"description":"A serene residential estate.","logo":"https://cdn.example.com/logos/estate.png"}
+[2026-01-28T13:10:23.672Z] INFO: RESPONSE ⬅️ [POST] /api/estates/create 500 - 89ms
+[2026-01-28T13:10:23.672Z] INFO: ------------------------------------------------------------------
+[2026-01-28T13:11:05.682Z] INFO: REQUEST STARTED ➡️ [POST] /api/estates/create
+[2026-01-28T13:11:05.703Z] INFO: Body: {"name":"Greenwood Estate","location":{"address":"123 Estate Road","city":"Lagos","state":"Lagos State","country":"Nigeria","coordinates":{"lat":6.5244,"lng":3.3792}},"supportingDocuments":[{"filename":"deed.pdf","fileType":"application/pdf","url":"https://cdn.example.com/files/deed.pdf","uploadedAt":"2026-01-28"}],"description":"A serene residential estate.","logo":"https://cdn.example.com/logos/estate.png"}
+[2026-01-28T13:11:05.726Z] INFO: RESPONSE ⬅️ [POST] /api/estates/create 500 - 44ms
+[2026-01-28T13:11:05.726Z] INFO: ------------------------------------------------------------------

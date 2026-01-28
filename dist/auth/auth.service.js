@@ -71,6 +71,7 @@ let AuthService = AuthService_1 = class AuthService {
                 access_token: this.jwtService.sign(payload),
             };
         }
+        const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
         if (user.isActive) {
             const payload = {
                 sub: user._id,
@@ -81,7 +82,9 @@ let AuthService = AuthService_1 = class AuthService {
                 reason: 'active_on_another_device',
                 version: user.tokenVersion,
             };
-            await this.mailService.sendVerificationEmail(user.email, user.verificationToken, `${user.firstName} ${user.lastName}`);
+            await this.mailService.sendVerificationEmail(user.email, verificationToken, `${user.firstName} ${user.lastName}`);
+            user.verificationToken = verificationToken;
+            await user.save();
             return {
                 status: 222,
                 message: 'User logged in on another device',
@@ -90,7 +93,6 @@ let AuthService = AuthService_1 = class AuthService {
                 access_token: this.jwtService.sign(payload),
             };
         }
-        const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
         user.verificationToken = verificationToken;
         await user.save();
         console.log('Login Verification token---', verificationToken);
@@ -172,9 +174,9 @@ let AuthService = AuthService_1 = class AuthService {
         const user = await this.validateUserRegistering(registerDto);
         console.log('USER', user);
         const payload = {
-            sub: user.id.toString(),
+            sub: user._id.toString(),
             email: user.email,
-            roles: user.roles,
+            roles: user.primaryRole,
             type: 'auth',
             isVerified: false,
             version: 0,
@@ -212,10 +214,12 @@ let AuthService = AuthService_1 = class AuthService {
     async verifyPreAuth(info, payload) {
         const { email, code } = info;
         const user = await this.usersService.findByEmail(email);
+        console.log('USER', user._id);
+        console.log('PAYLOAD', payload);
         if (!user) {
             throw new common_1.BadRequestException('User not found');
         }
-        if (user._id.toString() !== payload.sub) {
+        if (user._id.toString() !== payload.userId) {
             throw new common_1.UnauthorizedException('Identity mismatch');
         }
         if (code !== user.verificationToken) {
