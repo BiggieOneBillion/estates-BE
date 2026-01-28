@@ -64,6 +64,7 @@ export class EstatesService {
 
       await session.commitTransaction();
       this.logger.log(`Estate "${newEstate.name}" created successfully for user ${userId}`);
+      
       return newEstate;
     } catch (error) {
       await session.abortTransaction();
