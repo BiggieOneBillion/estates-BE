@@ -1,0 +1,39 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/estate-management
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - estate-net
+
+  mongodb:
+    image: mongodb/mongodb-community-server:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - estate-net
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - estate-net
+
+networks:
+  estate-net:
+    driver: bridge
+
+volumes:
+  mongodb_data:
