@@ -81,6 +81,11 @@ export class AuthService {
       };
     }
 
+    // Generate a 6-digit verification code
+    const verificationToken = Math.floor(
+      100000 + Math.random() * 900000,
+    ).toString();
+
     if(user.isActive){ // IF USER IS ACTIVE ( THAT IS LOGGED IN ON ANOTHER DEVICE) AND WANT TO LOG IN ON THIS DEVICE
         const payload: JwtPayload = {
         sub: user._id as string,
@@ -96,9 +101,12 @@ export class AuthService {
       // here we resend the email to the user and tell them to verify their email
       await this.mailService.sendVerificationEmail(
         user.email,
-        user.verificationToken!,
+        verificationToken,
         `${user.firstName} ${user.lastName}`,
       );
+
+      user.verificationToken = verificationToken;
+      await user.save();
       // Return custom response instead of throwing exception
       return {
         status: 222,
@@ -111,10 +119,7 @@ export class AuthService {
 
     
 
-    // Generate a 6-digit verification code
-    const verificationToken = Math.floor(
-      100000 + Math.random() * 900000,
-    ).toString();
+ 
     user.verificationToken = verificationToken;
     await user.save();
 
@@ -260,9 +265,9 @@ export class AuthService {
     const user = await this.validateUserRegistering(registerDto);
     console.log('USER', user);
     const payload: JwtPayload = {
-      sub: user.id.toString(),
+      sub: user._id.toString(),
       email: user.email,
-      roles: user.roles,
+      roles: user.primaryRole,
       type: 'auth',
       isVerified: false, // Registration still needs email verification
       version: 0, // Initial version
@@ -309,15 +314,19 @@ export class AuthService {
     };
   }
 
-  async verifyPreAuth(info: { email: string; code: string }, payload: JwtPayload) {
+  async verifyPreAuth(info: { email: string; code: string }, payload: any) {
     const { email, code } = info;
     const user = await this.usersService.findByEmail(email);
+
+    console.log('USER', user!._id);
+
+    console.log('PAYLOAD', payload);
 
     if (!user) {
       throw new BadRequestException('User not found');
     }
 
-    if ((user._id as any).toString() !== payload.sub) {
+    if ((user._id as any).toString() !== payload.userId) {
       throw new UnauthorizedException('Identity mismatch');
     }
 
