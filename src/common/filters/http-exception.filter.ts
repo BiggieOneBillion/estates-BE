@@ -10,12 +10,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception.getStatus();
     const exceptionResponse = exception.getResponse();
 
+    let message = exceptionResponse['message'] || exception.message || 'Error occurred';
+    let error = exceptionResponse['error'] || exception.name || 'HttpException';
+
     const errorResponse = {
       statusCode: status,
+      error,
+      message,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
-      message: exceptionResponse['message'] || exception.message || 'Internal server error',
       ...(process.env.NODE_ENV === 'development' && { stack: exception.stack }),
     };
 
@@ -33,14 +37,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
 
+    const message = exception instanceof HttpException
+      ? exception.getResponse()['message'] || exception.message
+      : exception instanceof Error ? exception.message : 'Internal server error';
+
+    const error = exception instanceof HttpException
+      ? exception.getResponse()['error'] || exception.name
+      : exception instanceof Error ? exception.name : 'InternalServerError';
+
     const errorResponse = {
       statusCode: status,
+      error,
+      message,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
-      message: exception instanceof HttpException
-        ? exception.message
-        : 'Internal server error',
       ...(process.env.NODE_ENV === 'development' && { stack: exception instanceof Error ? exception.stack : undefined }),
     };
 
