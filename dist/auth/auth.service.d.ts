@@ -1,6 +1,5 @@
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { User } from 'src/users/entities/user.entity';
@@ -37,7 +36,7 @@ export declare class AuthService {
     verifyPreAuth(info: {
         email: string;
         code: string;
-    }, payload: JwtPayload): Promise<{
+    }, payload: any): Promise<{
         user: UserResponseDto;
         access_token: string;
     }>;

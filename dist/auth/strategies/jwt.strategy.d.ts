@@ -14,7 +14,7 @@ export declare class JwtStrategy extends JwtStrategy_base {
         email: string;
         roles: import("../../users/entities/user.entity").UserRole;
         estate: string | undefined;
-        type: "auth" | "pre-auth";
+        type: "auth" | "pre-auth" | "password_reset";
         isVerified: boolean;
     }>;
 }

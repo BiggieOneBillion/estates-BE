@@ -19,6 +19,13 @@ services:
     image: mongodb/mongodb-community-server:latest
     ports:
       - "27017:27017"
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      test: mongosh --eval "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongodb:27017' }] }).ok }"
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
     volumes:
       - mongodb_data:/data/db
     networks:
