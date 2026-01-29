@@ -5,6 +5,7 @@ import { Model } from 'mongoose';
 import { EventHandler } from '../interfaces/event-handler.interface';
 import { OutboxEvent, OutboxEventStatus } from '../entities/outbox.entity';
 import { BaseDomainEvent } from '../domain/base-domain-event';
+import { DeadLetterQueueService } from './dead-letter-queue.service';
 
 @Injectable()
 export class EventDispatcher {
@@ -14,6 +15,7 @@ export class EventDispatcher {
   constructor(
     @InjectModel(OutboxEvent.name)
     private readonly outboxModel: Model<OutboxEvent>,
+    private readonly deadLetterQueueService: DeadLetterQueueService,
   ) {}
 
   /**
@@ -140,7 +142,7 @@ export class EventDispatcher {
     const maxRetries = outboxEntry.maxRetries;
 
     if (retryCount >= maxRetries) {
-      // Max retries reached, mark as failed
+      // Max retries reached, mark as failed and move to dead letter queue
       await this.outboxModel.updateOne(
         { _id: outboxEntry._id },
         {
@@ -154,6 +156,16 @@ export class EventDispatcher {
       this.logger.error(
         `Event ${outboxEntry.eventType} (ID: ${outboxEntry.eventId}) failed after ${maxRetries} retries`,
       );
+
+      // Move to dead letter queue
+      try {
+        await this.deadLetterQueueService.moveToDeadLetterQueue(outboxEntry);
+      } catch (dlqError) {
+        this.logger.error(
+          `Failed to move event to dead letter queue: ${dlqError.message}`,
+          dlqError.stack,
+        );
+      }
     } else {
       // Calculate next retry time with exponential backoff
       const nextRetryAt = this.calculateNextRetry(retryCount);
