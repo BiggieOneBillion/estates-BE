@@ -156,6 +156,7 @@ let AuthService = AuthService_1 = class AuthService {
         });
         const savedUser = await newUser.save();
         this.logger.log(`New user registered: ${savedUser.email}`);
+        await this.mailService.sendVerificationEmail(registerDto.email, verificationToken, `${registerDto.firstName} ${registerDto.lastName}`);
         const resObj = {
             firstName: savedUser.firstName,
             lastName: savedUser.lastName,
@@ -174,7 +175,7 @@ let AuthService = AuthService_1 = class AuthService {
         const user = await this.validateUserRegistering(registerDto);
         console.log('USER', user);
         const payload = {
-            sub: user._id.toString(),
+            sub: user.id.toString(),
             email: user.email,
             roles: user.primaryRole,
             type: 'auth',
