@@ -8,6 +8,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AllExceptionsFilter = exports.HttpExceptionFilter = void 0;
 const common_1 = require("@nestjs/common");
+const logger_1 = require("../utils/logger");
+const error_maps_1 = require("../utils/error-maps");
 let HttpExceptionFilter = class HttpExceptionFilter {
     catch(exception, host) {
         const ctx = host.switchToHttp();
@@ -15,15 +17,29 @@ let HttpExceptionFilter = class HttpExceptionFilter {
         const request = ctx.getRequest();
         const status = exception.getStatus();
         const exceptionResponse = exception.getResponse();
+        const requestId = request.headers['x-request-id'] || 'system';
+        const internalMessage = exceptionResponse['message'] || exception.message || 'Error occurred';
+        const internalError = exceptionResponse['error'] || exception.name || 'HttpException';
+        const publicError = (0, error_maps_1.normalizeError)(internalError, Array.isArray(internalMessage) ? internalMessage[0] : internalMessage);
+        logger_1.logger.error(`[${requestId}] ${internalError}: ${Array.isArray(internalMessage) ? internalMessage.join(', ') : internalMessage}`, {
+            stack: exception.stack,
+            path: request.url,
+            method: request.method,
+        });
         const errorResponse = {
-            statusCode: status,
+            success: false,
+            requestId,
+            error: {
+                statusCode: publicError.statusCode || status,
+                type: publicError.type,
+                message: publicError.message,
+                ...(Array.isArray(internalMessage) && { details: internalMessage }),
+            },
             timestamp: new Date().toISOString(),
             path: request.url,
             method: request.method,
-            message: exceptionResponse['message'] || exception.message || 'Internal server error',
-            ...(process.env.NODE_ENV === 'development' && { stack: exception.stack }),
         };
-        response.status(status).json(errorResponse);
+        response.status(errorResponse.error.statusCode).json(errorResponse);
     }
 };
 exports.HttpExceptionFilter = HttpExceptionFilter;
@@ -35,18 +51,34 @@ let AllExceptionsFilter = class AllExceptionsFilter {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse();
         const request = ctx.getRequest();
+        const requestId = request.headers['x-request-id'] || 'system';
         const status = exception instanceof common_1.HttpException
             ? exception.getStatus()
             : common_1.HttpStatus.INTERNAL_SERVER_ERROR;
+        const message = exception instanceof common_1.HttpException
+            ? exception.getResponse()['message'] || exception.message
+            : exception instanceof Error ? exception.message : 'Internal server error';
+        const errorType = exception instanceof common_1.HttpException
+            ? exception.getResponse()['error'] || exception.name
+            : exception instanceof Error ? exception.name : 'InternalServerError';
+        logger_1.logger.error(`[${requestId}] UNHANDLED_EXCEPTION: ${message}`, {
+            stack: exception instanceof Error ? exception.stack : undefined,
+            path: request.url,
+            method: request.method,
+        });
         const errorResponse = {
-            statusCode: status,
+            success: false,
+            requestId,
+            error: {
+                statusCode: status,
+                type: errorType,
+                message: status === common_1.HttpStatus.INTERNAL_SERVER_ERROR && process.env.NODE_ENV === 'production'
+                    ? 'An unexpected error occurred. Please contact support.'
+                    : message,
+            },
             timestamp: new Date().toISOString(),
             path: request.url,
             method: request.method,
-            message: exception instanceof common_1.HttpException
-                ? exception.message
-                : 'Internal server error',
-            ...(process.env.NODE_ENV === 'development' && { stack: exception instanceof Error ? exception.stack : undefined }),
         };
         response.status(status).json(errorResponse);
     }

@@ -90,6 +90,11 @@ export class UsersController {
         );
       }
     }
+
+    if (!user?.estateId) {
+      throw new ForbiddenException('You cannot create admin before estate is created');
+    }
+    
     return this.userManagement.createAdmin(
       userId,
       {

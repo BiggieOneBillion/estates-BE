@@ -1,5 +1,7 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { logger } from '../utils/logger';
+import { normalizeError } from '../utils/error-maps';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -11,11 +13,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const exceptionResponse = exception.getResponse();
     const requestId = request.headers['x-request-id'] || 'system';
 
-    const message = exceptionResponse['message'] || exception.message || 'Error occurred';
-    const errorType = exceptionResponse['error'] || exception.name || 'HttpException';
+    const internalMessage = exceptionResponse['message'] || exception.message || 'Error occurred';
+    const internalError = exceptionResponse['error'] || exception.name || 'HttpException';
+
+    // Map internal error to public safe response
+    const publicError = normalizeError(internalError, Array.isArray(internalMessage) ? internalMessage[0] : internalMessage);
 
     // Log the full error internally with requestId
-    logger.error(`[${requestId}] ${errorType}: ${Array.isArray(message) ? message.join(', ') : message}`, {
+    logger.error(`[${requestId}] ${internalError}: ${Array.isArray(internalMessage) ? internalMessage.join(', ') : internalMessage}`, {
       stack: exception.stack,
       path: request.url,
       method: request.method,
@@ -25,16 +30,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
       success: false,
       requestId,
       error: {
-        statusCode: status,
-        type: errorType,
-        message: message,
+        statusCode: publicError.statusCode || status,
+        type: publicError.type,
+        message: publicError.message,
+        ...(Array.isArray(internalMessage) && { details: internalMessage }), // Include validation details if they exist
       },
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
     };
 
-    response.status(status).json(errorResponse);
+    response.status(errorResponse.error.statusCode).json(errorResponse);
   }
 }
 

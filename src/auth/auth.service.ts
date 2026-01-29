@@ -240,6 +240,12 @@ export class AuthService {
 
     const savedUser = await newUser.save();
     this.logger.log(`New user registered: ${savedUser.email}`);
+    
+    this.logger.log(`New user registered email token: ${verificationToken}`);
+
+
+
+
     // await this.mailService.sendVerificationEmail(
     //   registerDto.email,
     //   verificationToken,
@@ -265,7 +271,7 @@ export class AuthService {
     const user = await this.validateUserRegistering(registerDto);
     console.log('USER', user);
     const payload: JwtPayload = {
-      sub: user._id.toString(),
+      sub: user.id.toString(),
       email: user.email,
       roles: user.primaryRole,
       type: 'auth',

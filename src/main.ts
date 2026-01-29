@@ -1,4 +1,5 @@
 // src/main.ts (updated)
+import './tracing';
 import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
