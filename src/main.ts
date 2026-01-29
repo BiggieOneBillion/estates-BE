@@ -10,6 +10,7 @@ import {
   AllExceptionsFilter,
 } from './common/filters/http-exception.filter';
 import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
+import { setupBullBoard } from './common/events/bull-board.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -40,7 +41,8 @@ async function bootstrap() {
   // Global filters
   app.useGlobalFilters(new HttpExceptionFilter(), new AllExceptionsFilter());
 
-
+  // Setup BullBoard for queue monitoring
+  setupBullBoard(app);
 
   // Swagger/OpenAPI documentation
   const config = new DocumentBuilder()
@@ -59,5 +61,7 @@ async function bootstrap() {
   const port = configService.get('PORT') || 3000;
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`API Documentation: http://localhost:${port}/api/docs`);
+  console.log(`Queue Monitoring: http://localhost:${port}/admin/queues`);
 }
 bootstrap();
