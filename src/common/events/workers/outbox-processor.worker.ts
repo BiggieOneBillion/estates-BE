@@ -131,7 +131,7 @@ export class OutboxProcessorWorker implements OnModuleInit {
     // Add events to the queue
     const jobs = pendingEvents.map((event) => ({
       name: `process-${event.eventType}`,
-      data: { outboxId: event._id.toString() },
+      data: { outboxId: (event._id as any).toString() },
       opts: {
         jobId: event.eventId, // Use eventId as job ID to prevent duplicates
       },
