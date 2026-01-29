@@ -1,6 +1,6 @@
 // src/common/events/bull-board.config.ts
 import { createBullBoard } from '@bull-board/api';
-import { BullAdapter } from '@bull-board/api/bullAdapter';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { Queue } from 'bullmq';
 import { INestApplication } from '@nestjs/common';
@@ -21,7 +21,7 @@ export function setupBullBoard(app: INestApplication) {
   serverAdapter.setBasePath('/admin/queues');
 
   createBullBoard({
-    queues: [new BullAdapter(outboxQueue)],
+    queues: [new BullMQAdapter(outboxQueue)],
     serverAdapter: serverAdapter,
   });
 
