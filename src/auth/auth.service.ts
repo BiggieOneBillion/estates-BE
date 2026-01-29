@@ -17,6 +17,13 @@ import { Model } from 'mongoose';
 import { MailService } from 'src/common/services/mail.service';
 import { UserResponseDto, VerifyLoginResponseDto } from './dto/verify-login-response.dto';
 import { plainToInstance } from "class-transformer"
+import { EventPublisher } from 'src/common/events/services/event-publisher.service';
+import {
+  UserCreatedEvent,
+  UserLoggedInEvent,
+  UserPasswordResetRequestedEvent,
+  UserVerifiedEvent,
+} from 'src/common/events/domain/user-events';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +34,7 @@ export class AuthService {
     private jwtService: JwtService,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private mailService: MailService,
+    private eventPublisher: EventPublisher,
   ) {}
 
   async validateUser(
@@ -98,15 +106,24 @@ export class AuthService {
         // estate: user.estate,
       };
 
-      // here we resend the email to the user and tell them to verify their email
-      await this.mailService.sendVerificationEmail(
-        user.email,
-        verificationToken,
-        `${user.firstName} ${user.lastName}`,
-      );
+      // Use transaction to save user and publish event atomically
+      const session = await this.userModel.db.startSession();
+      await session.withTransaction(async () => {
+        user.verificationToken = verificationToken;
+        await user.save({ session });
 
-      user.verificationToken = verificationToken;
-      await user.save();
+        // Publish UserLoggedInEvent
+        const event = new UserLoggedInEvent({
+          userId: user._id as string,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          verificationToken,
+          deviceInfo: 'active_on_another_device',
+        });
+        await this.eventPublisher.publish(event, session);
+      });
+
       // Return custom response instead of throwing exception
       return {
         status: 222,
@@ -120,8 +137,22 @@ export class AuthService {
     
 
  
-    user.verificationToken = verificationToken;
-    await user.save();
+    // Use transaction to save user and publish event atomically
+    const session = await this.userModel.db.startSession();
+    await session.withTransaction(async () => {
+      user.verificationToken = verificationToken;
+      await user.save({ session });
+
+      // Publish UserLoggedInEvent
+      const event = new UserLoggedInEvent({
+        userId: user._id as string,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        verificationToken,
+      });
+      await this.eventPublisher.publish(event, session);
+    });
 
     console.log('Login Verification token---', verificationToken);
 
@@ -238,13 +269,25 @@ export class AuthService {
 
     // console.log('New user:', newUser); // Add this line to log the newUser object
 
-    const savedUser = await newUser.save();
-    this.logger.log(`New user registered: ${savedUser.email}`);
-    
-    this.logger.log(`New user registered email token: ${verificationToken}`);
+    // Use transaction to save user and publish event atomically
+    const session = await this.userModel.db.startSession();
+    let savedUser;
+    await session.withTransaction(async () => {
+      savedUser = await newUser.save({ session });
+      this.logger.log(`New user registered: ${savedUser.email}`);
+      this.logger.log(`New user registered email token: ${verificationToken}`);
 
-
-
+      // Publish UserCreatedEvent
+      const event = new UserCreatedEvent({
+        userId: savedUser._id as string,
+        email: savedUser.email,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        role: savedUser.primaryRole,
+        verificationToken,
+      });
+      await this.eventPublisher.publish(event, session);
+    });
 
     // await this.mailService.sendVerificationEmail(
     //   registerDto.email,
@@ -391,17 +434,31 @@ export class AuthService {
     // Generate a 6-digit OTP
     const resetOTP = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Store the OTP and set an expiration time (15 minutes from now)
-    user.passwordResetToken = resetOTP;
-    user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-    await user.save();
+    // Use transaction to save user and publish event atomically
+    const session = await this.userModel.db.startSession();
+    await session.withTransaction(async () => {
+      // Store the OTP and set an expiration time (15 minutes from now)
+      user.passwordResetToken = resetOTP;
+      user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+      await user.save({ session });
+
+      // Publish UserPasswordResetRequestedEvent
+      const event = new UserPasswordResetRequestedEvent({
+        userId: user._id as string,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        resetToken: resetOTP,
+      });
+      await this.eventPublisher.publish(event, session);
+    });
 
     // Send the OTP via email
-    await this.mailService.sendPasswordResetEmail(
-      email,
-      resetOTP,
-      `${user.firstName} ${user.lastName}`,
-    );
+    // await this.mailService.sendPasswordResetEmail(
+    //   email,
+    //   resetOTP,
+    //   `${user.firstName} ${user.lastName}`,
+    // );
 
     return { message: 'Password reset OTP has been sent to your email' };
   }
