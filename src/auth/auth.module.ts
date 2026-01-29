@@ -10,6 +10,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from 'src/users/entities/user.entity';
 import { MailService } from 'src/common/services/mail.service'; 
+import { EventsInfrastructureModule } from 'src/common/events/events-infrastructure.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { MailService } from 'src/common/services/mail.service';
       }),
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    EventsInfrastructureModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, MailService],
