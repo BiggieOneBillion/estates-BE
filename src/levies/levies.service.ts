@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { SoftDeleteModel } from 'src/common/database/soft-delete.plugin';
 import { Levy, LevyType } from './entities/levy.entity';
 import { CreateLevyDto } from './dto/create-levy.dto';
 import { UpdateLevyDto } from './dto/update-levy.dto';
@@ -11,7 +12,7 @@ export class LeviesService {
   private readonly logger = new Logger(LeviesService.name);
 
   constructor(
-    @InjectModel(Levy.name) private readonly levyModel: Model<Levy>,
+    @InjectModel(Levy.name) private readonly levyModel: SoftDeleteModel<Levy>,
   ) {}
 
   async create(createLevyDto: CreateLevyDto, creatorId: string, estateId: string): Promise<Levy> {
@@ -76,9 +77,9 @@ export class LeviesService {
   }
 
   async remove(id: string, estateId: string): Promise<void> {
-    const result = await this.levyModel.deleteOne({ _id: id, estateId }).exec();
+    const result = await this.levyModel.softDelete({ _id: id, estateId });
     
-    if (result.deletedCount === 0) {
+    if (result.matchedCount === 0) {
       throw new NotFoundException(`Levy with ID ${id} not found`);
     }
 

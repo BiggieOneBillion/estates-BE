@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { softDeletePlugin, SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 
 export enum NotificationType {
   TOKEN_UPDATED = 'token_updated',
@@ -10,7 +11,11 @@ export enum NotificationType {
 }
 
 @Schema({ timestamps: true })
-export class Notification extends Document {
+export class Notification extends Document implements SoftDeleteDocument {
+  isDeleted: boolean;
+  deletedAt?: Date;
+  softDelete: () => Promise<this>;
+  restore: () => Promise<this>;
   @Prop({ required: true, type: MongooseSchema.Types.ObjectId, ref: 'User' })
   user: string; // The user who should receive the notification
 
@@ -34,3 +39,4 @@ export class Notification extends Document {
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);
+NotificationSchema.plugin(softDeletePlugin);

@@ -1,5 +1,5 @@
 // src/main.ts (updated)
-import './tracing';
+// import './tracing';
 import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -13,12 +13,21 @@ import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 import { setupBullBoard } from './common/events/bull-board.config';
 
 async function bootstrap() {
+  console.log('Starting NestFactory.create...');
   const app = await NestFactory.create(AppModule);
+  console.log('NestFactory.create completed');
   const configService = app.get(ConfigService);
 
   const redisIoAdapter = new RedisIoAdapter(app);
-  await redisIoAdapter.connectToRedis();
-  app.useWebSocketAdapter(redisIoAdapter);
+  try {
+    console.log('Connecting to Redis...');
+    await redisIoAdapter.connectToRedis();
+    app.useWebSocketAdapter(redisIoAdapter);
+    console.log('Redis connected successfully');
+  } catch (error) {
+    console.error('Fatal: Could not connect to Redis. Application exiting.');
+    process.exit(1);
+  }
 
   // Enable CORS
   app.enableCors({

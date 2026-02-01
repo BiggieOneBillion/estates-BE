@@ -1,18 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
-export class MailService {
+export class MailService implements OnModuleInit {
   private transporter;
 
-  constructor(private configService: ConfigService) {
+  constructor(private configService: ConfigService) {}
+
+  async onModuleInit() {
     // Check if we're in development mode
     const isDev = this.configService.get('NODE_ENV') !== 'production';
 
     if (isDev) {
       // Use Ethereal for development
-      this.createDevTransport();
+      await this.createDevTransport();
     } else {
       // Use Gmail for production
       this.transporter = nodemailer.createTransport({

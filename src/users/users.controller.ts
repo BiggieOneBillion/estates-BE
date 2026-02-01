@@ -44,6 +44,7 @@ import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePermissionsDto } from './dto/update-permissions.dto';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
+import { UserResponseDto } from 'src/auth/dto/verify-login-response.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -390,7 +391,8 @@ export class UsersController {
         const usersFromEstate = await this.usersService.findByEstate(
           user.estateId!.toString(),
         );
-        const userExist = usersFromEstate.find((user) => user.id === id);
+        
+        const userExist = usersFromEstate.find((user) => user._id.toString() === id);
 
         if (!userExist) {
           throw new NotFoundException(
@@ -537,7 +539,7 @@ export class UsersController {
       user.estateId!.toString(),
     );
 
-    const userExistInEstate = userInEstate.find((user) => user.id === id);
+    const userExistInEstate = userInEstate.find((user) => user._id === id);
 
     if (!userExistInEstate) {
       throw new NotFoundException(
@@ -568,7 +570,7 @@ export class UsersController {
       user.estateId!.toString(),
     );
 
-    const userExistInEstate = userInEstate.find((user) => user.id === id);
+    const userExistInEstate = userInEstate.find((user) => user._id === id);
 
     if (!userExistInEstate) {
       throw new NotFoundException(
@@ -610,7 +612,7 @@ export class UsersController {
       throw new NotFoundException('User not found');
     }
 
-    let usersFromEstate: User[] | undefined;
+    let usersFromEstate: UserResponseDto[] | undefined;
 
     try {
       usersFromEstate = await this.usersService.findByEstate(
@@ -620,7 +622,7 @@ export class UsersController {
       throw new NotFoundException('User does not have an estate');
     }
 
-    const userExist = usersFromEstate.find((user) => user.id === updatePermissionsDto.id);
+    const userExist = usersFromEstate.find((user) => user._id === updatePermissionsDto.id);
 
     if (!userExist) {
       throw new NotFoundException(

@@ -1,7 +1,7 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { logger } from '../utils/logger';
-import { normalizeError } from '../utils/error-maps';
+import { normalizeError, ERROR_MAPS } from '../utils/error-maps';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -64,6 +64,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ? exception.getResponse()['error'] || exception.name
       : exception instanceof Error ? exception.name : 'InternalServerError';
 
+    // Map internal error to public safe response
+    const publicError = normalizeError(errorType, message);
+
+    // If it was a generic 500 but normalized to something else (like CONFLICT), update status
+    const finalStatus = status === HttpStatus.INTERNAL_SERVER_ERROR && publicError.statusCode !== HttpStatus.INTERNAL_SERVER_ERROR
+      ? publicError.statusCode
+      : status;
+
     // Log the full unexpected error internally
     logger.error(`[${requestId}] UNHANDLED_EXCEPTION: ${message}`, {
       stack: exception instanceof Error ? exception.stack : undefined,
@@ -75,17 +83,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       success: false,
       requestId,
       error: {
-        statusCode: status,
-        type: errorType,
-        message: status === HttpStatus.INTERNAL_SERVER_ERROR && process.env.NODE_ENV === 'production'
-          ? 'An unexpected error occurred. Please contact support.'
-          : message,
+        statusCode: finalStatus,
+        type: publicError.type,
+        message: finalStatus === HttpStatus.INTERNAL_SERVER_ERROR && process.env.NODE_ENV === 'production'
+          ? ERROR_MAPS['InternalServerError'].message
+          : publicError.message,
       },
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
     };
 
-    response.status(status).json(errorResponse);
+    response.status(finalStatus).json(errorResponse);
   }
 }
