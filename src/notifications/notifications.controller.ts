@@ -12,17 +12,21 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
-
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { MarkNotificationAsReadCommand, MarkAllNotificationsAsReadCommand } from './cqrs/commands/impl/notification-commands.impl';
+import { FindNotificationsByUserQuery, FindUnreadNotificationsByUserQuery } from './cqrs/queries/impl/notification-queries.impl';
 @ApiTags('Notifications')
 @ApiBearerAuth()
 @Controller('notifications')
 @UseGuards(JwtAuthGuard, VerifiedGuard, RolesGuard)
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
 
   @ApiOperation({
     summary: 'Get all user notifications',
@@ -31,7 +35,7 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'List of notifications retrieved successfully' })
   @Get()
   findAllForUser(@Request() req) {
-    return this.notificationsService.findAllByUser(req.user.userId);
+    return this.queryBus.execute(new FindNotificationsByUserQuery(req.user.userId));
   }
 
   @ApiOperation({
@@ -41,7 +45,7 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'List of unread notifications retrieved' })
   @Get('unread')
   findUnreadForUser(@Request() req) {
-    return this.notificationsService.findUnreadByUser(req.user.userId);
+    return this.queryBus.execute(new FindUnreadNotificationsByUserQuery(req.user.userId));
   }
 
   @ApiOperation({
@@ -52,7 +56,7 @@ export class NotificationsController {
   @ApiResponse({ status: 404, description: 'Notification not found' })
   @Post(':id/read')
   markAsRead(@Param('id') id: string) {
-    return this.notificationsService.markAsRead(id);
+    return this.commandBus.execute(new MarkNotificationAsReadCommand(id));
   }
 
   @ApiOperation({
@@ -62,6 +66,6 @@ export class NotificationsController {
   @ApiResponse({ status: 200, description: 'All notifications successfully marked as read' })
   @Post('read-all')
   markAllAsRead(@Request() req) {
-    return this.notificationsService.markAllAsRead(req.user.userId);
+    return this.commandBus.execute(new MarkAllNotificationsAsReadCommand(req.user.userId));
   }
 }
