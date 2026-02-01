@@ -15,7 +15,8 @@ import {
   ResourceType,
   PermissionAction,
 } from './entities/user.entity';
-import { MailService } from 'src/common/services/mail.service';
+import { EventPublisher } from 'src/common/events/services/event-publisher.service';
+import { UserAccountCreatedEvent } from 'src/common/events/domain/user-events';
 import { CreateAdminDetailsDto } from './dto/create-admin.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateTenantDto } from './dto/create-tenant.dto';
@@ -25,7 +26,7 @@ import * as bcrypt from 'bcrypt';
 export class UserManagementService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
-    private readonly mailService: MailService,
+    private readonly eventPublisher: EventPublisher,
   ) {}
 
   /**
@@ -128,12 +129,16 @@ export class UserManagementService {
 
       await newAdmin.save();
 
-      // Send email notification
-      await this.mailService.accountCreationEmail({
-        to: newAdmin.email,
-        name: `${newAdmin.firstName} ${newAdmin.lastName}`,
+      // Send event for account creation
+      const event = new UserAccountCreatedEvent({
+        userId: (newAdmin as any)._id.toString(),
+        email: newAdmin.email,
+        firstName: newAdmin.firstName,
+        lastName: newAdmin.lastName,
         password,
       });
+
+      await this.eventPublisher.publish(event);
     }
 
     // Update super admin's managed users
@@ -210,12 +215,16 @@ export class UserManagementService {
       $addToSet: { 'hierarchy.manages': newLandlord._id },
     });
 
-    // Send email notification
-    await this.mailService.accountCreationEmail({
-      to: newLandlord.email,
-      name: `${newLandlord.firstName} ${newLandlord.lastName}`,
+    // Send event for account creation
+    const event = new UserAccountCreatedEvent({
+      userId: (newLandlord as any)._id.toString(),
+      email: newLandlord.email,
+      firstName: newLandlord.firstName,
+      lastName: newLandlord.lastName,
       password,
     });
+
+    await this.eventPublisher.publish(event);
 
     return newLandlord;
   }
@@ -286,12 +295,16 @@ export class UserManagementService {
       });
     }
 
-    // Send email notification
-    await this.mailService.accountCreationEmail({
-      to: newTenant.email,
-      name: `${newTenant.firstName} ${newTenant.lastName}`,
+    // Send event for account creation
+    const event = new UserAccountCreatedEvent({
+      userId: (newTenant as any)._id.toString(),
+      email: newTenant.email,
+      firstName: newTenant.firstName,
+      lastName: newTenant.lastName,
       password,
     });
+
+    await this.eventPublisher.publish(event);
 
     return newTenant;
   }
@@ -352,11 +365,16 @@ export class UserManagementService {
       newUser.primaryRole !== UserRole.SUPER_ADMIN &&
       newUser.primaryRole !== UserRole.SITE_ADMIN
     ) {
-      await this.mailService.accountCreationEmail({
-        to: newUser.email,
-        name: `${newUser.firstName} ${newUser.lastName}`,
+      // Send event for account creation
+      const event = new UserAccountCreatedEvent({
+        userId: (newUser as any)._id.toString(),
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
         password,
       });
+
+      await this.eventPublisher.publish(event);
     }
 
     return newUser;
@@ -425,12 +443,16 @@ export class UserManagementService {
       $addToSet: { 'hierarchy.manages': newSecurity._id },
     });
 
-    // Send email notification
-    await this.mailService.accountCreationEmail({
-      to: newSecurity.email,
-      name: `${newSecurity.firstName} ${newSecurity.lastName}`,
+    // Send event for account creation
+    const event = new UserAccountCreatedEvent({
+      userId: (newSecurity as any)._id.toString(),
+      email: newSecurity.email,
+      firstName: newSecurity.firstName,
+      lastName: newSecurity.lastName,
       password,
     });
+
+    await this.eventPublisher.publish(event);
 
     return newSecurity;
   }
