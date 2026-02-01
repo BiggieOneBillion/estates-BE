@@ -4,6 +4,7 @@ import {
   OnModuleInit,
   RequestMethod,
 } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -31,6 +32,8 @@ import { LeviesModule } from './levies/levies.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ComplianceModule } from './compliance/compliance.module';
 import { EventsInfrastructureModule } from './common/events/events-infrastructure.module';
+import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
 @Module({
   imports: [
@@ -79,9 +82,18 @@ import { EventsInfrastructureModule } from './common/events/events-infrastructur
     LeviesModule,
     PaymentsModule,
     ComplianceModule,
+    AuditLogsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, InitialSeedService, MailService],
+  providers: [
+    AppService, 
+    InitialSeedService, 
+    MailService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
+  ],
   // exports: [MailService],
 })
 export class AppModule implements OnModuleInit {
