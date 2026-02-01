@@ -31,6 +31,7 @@ import { DeleteEstateCommand } from './cqrs/commands/impl/delete-estate.command'
 import { FindAllEstatesQuery } from './cqrs/queries/impl/find-all-estates.query';
 import { FindEstateByIdQuery } from './cqrs/queries/impl/find-estate-by-id.query';
 import { FindUserByIdQuery } from '../users/cqrs/queries/impl/find-user-by-id.query';
+import { EstateResponseDto } from './dto/response/estate.response.dto';
 
 @ApiTags('Estates')
 @ApiBearerAuth()
@@ -46,11 +47,11 @@ export class EstatesController {
     summary: 'Create a new estate',
     description: 'Allows Super Admins to register a new estate in the system.',
   })
-  @ApiResponse({ status: 201, description: 'Estate created successfully' })
+  @ApiResponse({ status: 201, type: EstateResponseDto, description: 'Estate created successfully' })
   @Post('/create')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
-  create(@Body() createEstateDto: CreateEstateDto, @Request() request) {
+  create(@Body() createEstateDto: CreateEstateDto, @Request() request): Promise<EstateResponseDto> {
     const userId = request.user.userId;
     return this.commandBus.execute(new CreateEstateCommand(createEstateDto, userId));
   }
@@ -59,11 +60,11 @@ export class EstatesController {
     summary: 'Get all estates',
     description: 'Allows Site Admins to view all estates.',
   })
-  @ApiResponse({ status: 200, description: 'List of all estates' })
+  @ApiResponse({ status: 200, type: [EstateResponseDto], description: 'List of all estates' })
   @Get()
   @UseGuards(RolesGuard)
   @Roles(UserRole.SITE_ADMIN)
-  findAll() {
+  findAll(): Promise<EstateResponseDto[]> {
     return this.queryBus.execute(new FindAllEstatesQuery());
   }
 
@@ -71,12 +72,12 @@ export class EstatesController {
     summary: 'Get estate by ID',
     description: 'Allows Super Admins to view details of their own estate.',
   })
-  @ApiResponse({ status: 200, description: 'Estate details' })
+  @ApiResponse({ status: 200, type: EstateResponseDto, description: 'Estate details' })
   @ApiResponse({ status: 404, description: 'Estate not found or unauthorized' })
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
-  async findOne(@Param('id') id: string, @Request() request) {
+  async findOne(@Param('id') id: string, @Request() request): Promise<EstateResponseDto> {
     const userId = request.user.userId;
     const user = await this.queryBus.execute(new FindUserByIdQuery(userId));
 

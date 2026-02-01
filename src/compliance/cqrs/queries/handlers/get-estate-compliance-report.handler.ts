@@ -1,22 +1,24 @@
 import { IQueryHandler, QueryHandler, QueryBus } from '@nestjs/cqrs';
 import { GetEstateComplianceReportQuery, CheckUserComplianceQuery } from '../impl/compliance-queries.impl';
 import { FindByEstateQuery } from '../../../../users/cqrs/queries/impl/find-by-estate.query';
+import { plainToInstance } from 'class-transformer';
+import { EstateComplianceReportDto } from '../dto/compliance.response.dto';
 
 @QueryHandler(GetEstateComplianceReportQuery)
 export class GetEstateComplianceReportHandler implements IQueryHandler<GetEstateComplianceReportQuery> {
   constructor(private readonly queryBus: QueryBus) {}
 
-  async execute(query: GetEstateComplianceReportQuery): Promise<any> {
+  async execute(query: GetEstateComplianceReportQuery): Promise<EstateComplianceReportDto> {
     const { estateId } = query;
     // Get all users in the estate
     const users = await this.queryBus.execute(new FindByEstateQuery(estateId));
     
-    const report = {
+    const report: any = {
       totalUsers: users.length,
       compliantUsers: 0,
       nonCompliantUsers: 0,
       totalOutstanding: 0,
-      userDetails: [] as any[],
+      userDetails: [],
     };
 
     for (const user of users) {
@@ -30,7 +32,7 @@ export class GetEstateComplianceReportHandler implements IQueryHandler<GetEstate
       }
 
       report.userDetails.push({
-        userId: user._id,
+        userId: (user._id as any).toString(),
         name: `${user.firstName} ${user.lastName}`,
         email: user.email,
         role: user.primaryRole,
@@ -40,6 +42,6 @@ export class GetEstateComplianceReportHandler implements IQueryHandler<GetEstate
       });
     }
 
-    return report;
+    return plainToInstance(EstateComplianceReportDto, report, { excludeExtraneousValues: true });
   }
 }

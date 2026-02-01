@@ -15,26 +15,31 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const notifications_service_1 = require("./notifications.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const verified_guard_1 = require("../auth/guards/verified.guard");
+const cqrs_1 = require("@nestjs/cqrs");
+const notification_commands_impl_1 = require("./cqrs/commands/impl/notification-commands.impl");
+const notification_queries_impl_1 = require("./cqrs/queries/impl/notification-queries.impl");
+const notification_response_dto_1 = require("./dto/response/notification.response.dto");
 let NotificationsController = class NotificationsController {
-    notificationsService;
-    constructor(notificationsService) {
-        this.notificationsService = notificationsService;
+    commandBus;
+    queryBus;
+    constructor(commandBus, queryBus) {
+        this.commandBus = commandBus;
+        this.queryBus = queryBus;
     }
-    findAllForUser(req) {
-        return this.notificationsService.findAllByUser(req.user.userId);
+    async findAllForUser(req) {
+        return this.queryBus.execute(new notification_queries_impl_1.FindNotificationsByUserQuery(req.user.userId));
     }
-    findUnreadForUser(req) {
-        return this.notificationsService.findUnreadByUser(req.user.userId);
+    async findUnreadForUser(req) {
+        return this.queryBus.execute(new notification_queries_impl_1.FindUnreadNotificationsByUserQuery(req.user.userId));
     }
     markAsRead(id) {
-        return this.notificationsService.markAsRead(id);
+        return this.commandBus.execute(new notification_commands_impl_1.MarkNotificationAsReadCommand(id));
     }
     markAllAsRead(req) {
-        return this.notificationsService.markAllAsRead(req.user.userId);
+        return this.commandBus.execute(new notification_commands_impl_1.MarkAllNotificationsAsReadCommand(req.user.userId));
     }
 };
 exports.NotificationsController = NotificationsController;
@@ -43,24 +48,24 @@ __decorate([
         summary: 'Get all user notifications',
         description: 'Retrieves a complete list of notifications for the currently authenticated user.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of notifications retrieved successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: [notification_response_dto_1.NotificationResponseDto], description: 'List of notifications retrieved successfully' }),
     (0, common_1.Get)(),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], NotificationsController.prototype, "findAllForUser", null);
 __decorate([
     (0, swagger_1.ApiOperation)({
         summary: 'Get unread notifications',
         description: 'Retrieves only the unread notifications for the currently authenticated user.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of unread notifications retrieved' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: [notification_response_dto_1.NotificationResponseDto], description: 'List of unread notifications retrieved' }),
     (0, common_1.Get)('unread'),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], NotificationsController.prototype, "findUnreadForUser", null);
 __decorate([
     (0, swagger_1.ApiOperation)({
@@ -92,6 +97,7 @@ exports.NotificationsController = NotificationsController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('notifications'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard, roles_guard_1.RolesGuard),
-    __metadata("design:paramtypes", [notifications_service_1.NotificationsService])
+    __metadata("design:paramtypes", [cqrs_1.CommandBus,
+        cqrs_1.QueryBus])
 ], NotificationsController);
 //# sourceMappingURL=notifications.controller.js.map

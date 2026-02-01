@@ -15,61 +15,67 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EstatesController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const estates_service_1 = require("./estates.service");
 const create_estate_dto_1 = require("./dto/create-estate.dto");
 const update_estate_dto_1 = require("./dto/update-estate.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const user_entity_1 = require("../users/entities/user.entity");
 const role_decorator_1 = require("../auth/decorators/role.decorator");
-const users_service_1 = require("../users/users.service");
 const verified_guard_1 = require("../auth/guards/verified.guard");
+const cqrs_1 = require("@nestjs/cqrs");
+const create_estate_command_1 = require("./cqrs/commands/impl/create-estate.command");
+const update_estate_command_1 = require("./cqrs/commands/impl/update-estate.command");
+const delete_estate_command_1 = require("./cqrs/commands/impl/delete-estate.command");
+const find_all_estates_query_1 = require("./cqrs/queries/impl/find-all-estates.query");
+const find_estate_by_id_query_1 = require("./cqrs/queries/impl/find-estate-by-id.query");
+const find_user_by_id_query_1 = require("../users/cqrs/queries/impl/find-user-by-id.query");
+const estate_response_dto_1 = require("./dto/response/estate.response.dto");
 let EstatesController = class EstatesController {
-    estatesService;
-    usersService;
-    constructor(estatesService, usersService) {
-        this.estatesService = estatesService;
-        this.usersService = usersService;
+    commandBus;
+    queryBus;
+    constructor(commandBus, queryBus) {
+        this.commandBus = commandBus;
+        this.queryBus = queryBus;
     }
     create(createEstateDto, request) {
         const userId = request.user.userId;
-        return this.estatesService.create(createEstateDto, userId);
+        return this.commandBus.execute(new create_estate_command_1.CreateEstateCommand(createEstateDto, userId));
     }
     findAll() {
-        return this.estatesService.findAll();
+        return this.queryBus.execute(new find_all_estates_query_1.FindAllEstatesQuery());
     }
     async findOne(id, request) {
         const userId = request.user.userId;
-        const user = await this.usersService.findOne(userId);
+        const user = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(userId));
         if (!user) {
             throw new common_1.NotFoundException('User not found');
         }
         if (!user.estateId || (user.estateId && user.estateId.toString() !== id)) {
             throw new common_1.NotFoundException('User does not have permission to access this estate');
         }
-        return this.estatesService.findOne(id);
+        return this.queryBus.execute(new find_estate_by_id_query_1.FindEstateByIdQuery(id));
     }
     async update(id, updateEstateDto, request) {
         const userId = request.user.userId;
-        const user = await this.usersService.findOne(userId);
+        const user = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(userId));
         if (!user) {
             throw new common_1.NotFoundException('User not found');
         }
         if (!user.estateId || (user.estateId && user.estateId.toString() !== id)) {
             throw new common_1.NotFoundException('User does not have permission to access this estate');
         }
-        return this.estatesService.update(id, updateEstateDto);
+        return this.commandBus.execute(new update_estate_command_1.UpdateEstateCommand(id, updateEstateDto));
     }
     async remove(id, request) {
         const userId = request.user.userId;
-        const user = await this.usersService.findOne(userId);
+        const user = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(userId));
         if (!user) {
             throw new common_1.NotFoundException('User not found');
         }
         if (!user.estateId || (user.estateId && user.estateId.toString() !== id)) {
             throw new common_1.NotFoundException('User does not have permission to access this estate');
         }
-        return this.estatesService.remove(id);
+        return this.commandBus.execute(new delete_estate_command_1.DeleteEstateCommand(id));
     }
 };
 exports.EstatesController = EstatesController;
@@ -78,7 +84,7 @@ __decorate([
         summary: 'Create a new estate',
         description: 'Allows Super Admins to register a new estate in the system.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'Estate created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 201, type: estate_response_dto_1.EstateResponseDto, description: 'Estate created successfully' }),
     (0, common_1.Post)('/create'),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.SUPER_ADMIN),
@@ -86,27 +92,27 @@ __decorate([
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_estate_dto_1.CreateEstateDto, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], EstatesController.prototype, "create", null);
 __decorate([
     (0, swagger_1.ApiOperation)({
         summary: 'Get all estates',
         description: 'Allows Site Admins to view all estates.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of all estates' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: [estate_response_dto_1.EstateResponseDto], description: 'List of all estates' }),
     (0, common_1.Get)(),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.SITE_ADMIN),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], EstatesController.prototype, "findAll", null);
 __decorate([
     (0, swagger_1.ApiOperation)({
         summary: 'Get estate by ID',
         description: 'Allows Super Admins to view details of their own estate.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Estate details' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: estate_response_dto_1.EstateResponseDto, description: 'Estate details' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Estate not found or unauthorized' }),
     (0, common_1.Get)(':id'),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
@@ -153,7 +159,7 @@ exports.EstatesController = EstatesController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('estates'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard),
-    __metadata("design:paramtypes", [estates_service_1.EstatesService,
-        users_service_1.UsersService])
+    __metadata("design:paramtypes", [cqrs_1.CommandBus,
+        cqrs_1.QueryBus])
 ], EstatesController);
 //# sourceMappingURL=estates.controller.js.map

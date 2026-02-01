@@ -37,6 +37,7 @@ import { Roles } from 'src/auth/decorators/role.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
+import { TokenResponseDto } from './dto/response/token.response.dto';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CreateTokenCommand } from './cqrs/commands/impl/create-token.command';
 import { UpdateTokenCommand } from './cqrs/commands/impl/update-token.command';
@@ -59,14 +60,14 @@ export class TokenController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new gate pass token for visitors' })
-  @ApiResponse({ status: 201, description: 'Token created successfully' })
+  @ApiResponse({ status: 201, type: TokenResponseDto, description: 'Token created successfully' })
   @Roles(
     UserRole.LANDLORD,
     UserRole.TENANT,
     UserRole.ADMIN,
     UserRole.SUPER_ADMIN,
   )
-  async create(@Body() createTokenDto: CreateTokenDto, @Request() req) {
+  async create(@Body() createTokenDto: CreateTokenDto, @Request() req): Promise<TokenResponseDto> {
     // console.log('THE VERY BEGIGNING');
     // check if the user really belongs to the estate they are generating the token for.
     const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
@@ -131,14 +132,14 @@ export class TokenController {
 
   @Get()
   @ApiOperation({ summary: 'Get all tokens' })
-  @ApiResponse({ status: 200, description: 'Return all tokens' })
+  @ApiResponse({ status: 200, type: [TokenResponseDto], description: 'Return all tokens' })
   @ApiQuery({
     name: 'estate',
     required: false,
     description: 'Filter by estate ID',
   })
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SECURITY)
-  async findAll(@Request() req, @Query('estateId') estateId?: string) {
+  async findAll(@Request() req, @Query('estateId') estateId?: string): Promise<TokenResponseDto[]> {
     // Get the current user
     const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     if (!user) {
@@ -199,9 +200,9 @@ export class TokenController {
 
   @Get('get-user-tokens/:id')
   @ApiOperation({ summary: 'Get all tokens created by the current user' })
-  @ApiResponse({ status: 200, description: 'Return all user tokens' })
+  @ApiResponse({ status: 200, type: [TokenResponseDto], description: 'Return all user tokens' })
   @Roles(UserRole.SUPER_ADMIN)
-  async findUserTokens(@Request() req, @Param() param: { id: string }) {
+  async findUserTokens(@Request() req, @Param() param: { id: string }): Promise<TokenResponseDto[]> {
     // check if the user is in the same estate as the super admin
     const superAdmin = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
 
@@ -223,20 +224,20 @@ export class TokenController {
 
   @Get('my-tokens')
   @ApiOperation({ summary: 'Get all tokens created by the current user' })
-  @ApiResponse({ status: 200, description: 'Return all user tokens' })
+  @ApiResponse({ status: 200, type: [TokenResponseDto], description: 'Return all user tokens' })
   @Roles(
     UserRole.LANDLORD,
     UserRole.TENANT,
     UserRole.ADMIN,
     UserRole.SUPER_ADMIN,
   )
-  findMyTokens(@Request() req) {
+  findMyTokens(@Request() req): Promise<TokenResponseDto[]> {
     return this.queryBus.execute(new FindTokensByUserQuery(req.user.userId));
   }
 
   @Get(':tokenId')
   @ApiOperation({ summary: 'Get token by id' })
-  @ApiResponse({ status: 200, description: 'Return token by id' })
+  @ApiResponse({ status: 200, type: TokenResponseDto, description: 'Return token by id' })
   @Roles(
     // UserRole.LANDLORD,
     // UserRole.TENANT,
@@ -244,7 +245,7 @@ export class TokenController {
     UserRole.SUPER_ADMIN,
     UserRole.SECURITY,
   )
-  findOne(@Param('tokenId') tokenId: string) {
+  findOne(@Param('tokenId') tokenId: string): Promise<TokenResponseDto> {
     return this.queryBus.execute(new FindTokenByStringQuery(tokenId));
   }
 

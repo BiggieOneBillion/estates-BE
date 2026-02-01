@@ -83,7 +83,7 @@ export class UsersController {
     summary: 'Create an admin user',
     description: 'Allows Super Admins or Admins with CREATE_ADMINS permission to create a new admin.',
   })
-  @ApiResponse({ status: 201, description: 'Admin created successfully' })
+  @ApiResponse({ status: 201, type: UserResponseDto, description: 'Admin created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/admin')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -91,7 +91,7 @@ export class UsersController {
   async createAdmins(
     @Body() createAdminDto: CreateAdminRequestDto,
     @CurrentUser() user: any,
-  ) {
+  ): Promise<UserResponseDto> {
     if (createAdminDto.primaryRole !== UserRole.ADMIN) {
       throw new ForbiddenException('You can only create an admin user');
     }
@@ -117,7 +117,7 @@ export class UsersController {
     summary: 'Create a landlord user',
     description: 'Allows Super Admins or Admins with CREATE_LANDLORDS permission to create a new landlord.',
   })
-  @ApiResponse({ status: 201, description: 'Landlord created successfully' })
+  @ApiResponse({ status: 201, type: UserResponseDto, description: 'Landlord created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/landlord')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -125,7 +125,7 @@ export class UsersController {
   async createLandLord(
     @Body() createLandlordDto: CreateLandlordRequestDto,
     @CurrentUser('userId') userId: string,
-  ) {
+  ): Promise<UserResponseDto> {
     if (createLandlordDto.primaryRole !== UserRole.LANDLORD) {
       throw new ForbiddenException('You can only create a landlord');
     }
@@ -148,14 +148,14 @@ export class UsersController {
     summary: 'Create a tenant user',
     description: 'Allows Super Admins, Admins, or Landlords to create a new tenant under them.',
   })
-  @ApiResponse({ status: 201, description: 'Tenant created successfully' })
+  @ApiResponse({ status: 201, type: UserResponseDto, description: 'Tenant created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/tenant')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LANDLORD)
   async createTenant(
     @Body() createTenantDto: CreateTenantRequestDto,
     @CurrentUser('userId') userId: string,
-  ) {
+  ): Promise<UserResponseDto> {
     if (createTenantDto.primaryRole !== UserRole.TENANT) {
       throw new ForbiddenException('You can only create a tenant');
     }
@@ -187,7 +187,7 @@ export class UsersController {
     summary: 'Create a security user',
     description: 'Allows Super Admins or Admins with CREATE_USERS permission to create a new security user.',
   })
-  @ApiResponse({ status: 201, description: 'Security user created successfully' })
+  @ApiResponse({ status: 201, type: UserResponseDto, description: 'Security user created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/security')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -195,7 +195,7 @@ export class UsersController {
   async createSecurity(
     @Body() createSecurityDto: CreateSecurityRequestDto,
     @CurrentUser('userId') userId: string,
-  ) {
+  ): Promise<UserResponseDto> {
     return this.commandBus.execute(
       new CreateSecurityCommand(
         userId,
@@ -263,11 +263,11 @@ export class UsersController {
     summary: 'Get all users in the estate',
     description: 'Allows Super Admins or Admins with READ_USERS permission to view all users in their estate.',
   })
-  @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
+  @ApiResponse({ status: 200, type: [UserResponseDto], description: 'Users retrieved successfully' })
   @Get('all')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @RequirePermission(ResourceType.USERS, PermissionAction.READ)
-  async findAll(@CurrentUser('estate') estate: string) {
+  async findAll(@CurrentUser('estate') estate: string): Promise<UserResponseDto[]> {
     console.log({estate});
     if (!estate) {
       throw new ForbiddenException('You must belong to an estate');
@@ -279,13 +279,13 @@ export class UsersController {
     summary: 'Get user by ID',
     description: 'Allows users to view their own profile, or Admins/Super Admins to view users in their estate.',
   })
-  @ApiResponse({ status: 200, description: 'User retrieved successfully' })
+  @ApiResponse({ status: 200, type: UserResponseDto, description: 'User retrieved successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @Get(':id')
   async findOne(
     @Param('id') id: string,
     @CurrentUser() currentUser: any,
-  ) {
+  ): Promise<UserResponseDto> {
     if (id === currentUser.userId) {
       return this.queryBus.execute(new FindUserByIdQuery(id));
     }

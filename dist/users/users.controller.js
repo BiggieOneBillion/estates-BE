@@ -30,21 +30,43 @@ const create_admin_request_dto_1 = require("./dto/request/create-admin.request.d
 const update_profile_request_dto_1 = require("./dto/request/update-profile.request.dto");
 const update_permissions_request_dto_1 = require("./dto/request/update-permissions.request.dto");
 const verified_guard_1 = require("../auth/guards/verified.guard");
+const user_response_dto_1 = require("./dto/response/user.response.dto");
 const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const permissions_decorator_1 = require("../auth/decorators/permissions.decorator");
 const permissions_guard_1 = require("../auth/guards/permissions.guard");
+const cqrs_1 = require("@nestjs/cqrs");
+const create_admin_command_1 = require("./cqrs/commands/impl/create-admin.command");
+const create_landlord_command_1 = require("./cqrs/commands/impl/create-landlord.command");
+const create_tenant_command_1 = require("./cqrs/commands/impl/create-tenant.command");
+const create_security_command_1 = require("./cqrs/commands/impl/create-security.command");
+const update_user_command_1 = require("./cqrs/commands/impl/update-user.command");
+const update_user_permissions_command_1 = require("./cqrs/commands/impl/update-user-permissions.command");
+const disable_token_generation_command_1 = require("./cqrs/commands/impl/disable-token-generation.command");
+const enable_token_generation_command_1 = require("./cqrs/commands/impl/enable-token-generation.command");
+const register_fcm_token_command_1 = require("./cqrs/commands/impl/register-fcm-token.command");
+const remove_fcm_token_command_1 = require("./cqrs/commands/impl/remove-fcm-token.command");
+const update_notification_preferences_command_1 = require("./cqrs/commands/impl/update-notification-preferences.command");
+const promote_landlord_to_admin_command_1 = require("./cqrs/commands/impl/promote-landlord-to-admin.command");
+const remove_admin_role_command_1 = require("./cqrs/commands/impl/remove-admin-role.command");
+const delete_user_command_1 = require("./cqrs/commands/impl/delete-user.command");
+const find_by_estate_query_1 = require("./cqrs/queries/impl/find-by-estate.query");
+const find_user_by_id_query_1 = require("./cqrs/queries/impl/find-user-by-id.query");
 let UsersController = class UsersController {
     usersService;
     userManagement;
-    constructor(usersService, userManagement) {
+    commandBus;
+    queryBus;
+    constructor(usersService, userManagement, commandBus, queryBus) {
         this.usersService = usersService;
         this.userManagement = userManagement;
+        this.commandBus = commandBus;
+        this.queryBus = queryBus;
     }
     async createAdmins(createAdminDto, user) {
         if (createAdminDto.primaryRole !== user_entity_1.UserRole.ADMIN) {
             throw new common_1.ForbiddenException('You can only create an admin user');
         }
-        return this.userManagement.createAdmin(user.userId, {
+        return this.commandBus.execute(new create_admin_command_1.CreateAdminCommand(user.userId, {
             firstName: createAdminDto.firstName,
             lastName: createAdminDto.lastName,
             email: createAdminDto.email,
@@ -53,26 +75,26 @@ let UsersController = class UsersController {
             customPositionTitle: createAdminDto.adminDetails?.customPositionTitle,
             department: createAdminDto.adminDetails?.department,
             additionalPermissions: createAdminDto.adminDetails?.additionalPermissions,
-        });
+        }));
     }
     async createLandLord(createLandlordDto, userId) {
         if (createLandlordDto.primaryRole !== user_entity_1.UserRole.LANDLORD) {
             throw new common_1.ForbiddenException('You can only create a landlord');
         }
-        return this.userManagement.createLandlord(userId, {
+        return this.commandBus.execute(new create_landlord_command_1.CreateLandlordCommand(userId, {
             firstName: createLandlordDto.firstName,
             lastName: createLandlordDto.lastName,
             email: createLandlordDto.email,
             phone: createLandlordDto.phone,
             canCreateTenants: createLandlordDto.canCreateTenants,
-        });
+        }));
     }
     async createTenant(createTenantDto, userId) {
         if (createTenantDto.primaryRole !== user_entity_1.UserRole.TENANT) {
             throw new common_1.ForbiddenException('You can only create a tenant');
         }
         const targetLandlordId = createTenantDto.tenantDetails.landlordId;
-        return this.userManagement.createTenant(targetLandlordId, {
+        return this.commandBus.execute(new create_tenant_command_1.CreateTenantCommand(targetLandlordId, {
             firstName: createTenantDto.firstName,
             lastName: createTenantDto.lastName,
             email: createTenantDto.email,
@@ -84,29 +106,29 @@ let UsersController = class UsersController {
             leaseEndDate: createTenantDto.tenantDetails?.leaseEndDate
                 ? new Date(createTenantDto.tenantDetails.leaseEndDate)
                 : undefined,
-        });
+        }));
     }
     async createSecurity(createSecurityDto, userId) {
-        return this.userManagement.createSecurity(userId, {
+        return this.commandBus.execute(new create_security_command_1.CreateSecurityCommand(userId, {
             firstName: createSecurityDto.firstName,
             lastName: createSecurityDto.lastName,
             email: createSecurityDto.email,
             phone: createSecurityDto.phone,
-        });
+        }));
     }
     async findAll(estate) {
         console.log({ estate });
         if (!estate) {
             throw new common_1.ForbiddenException('You must belong to an estate');
         }
-        return this.usersService.findByEstate(estate.toString());
+        return this.queryBus.execute(new find_by_estate_query_1.FindByEstateQuery(estate.toString()));
     }
     async findOne(id, currentUser) {
         if (id === currentUser.userId) {
-            return this.usersService.findOne(id);
+            return this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(id));
         }
         if ([user_entity_1.UserRole.SUPER_ADMIN, user_entity_1.UserRole.ADMIN, user_entity_1.UserRole.SITE_ADMIN].includes(currentUser.roles)) {
-            const targetUser = await this.usersService.findOne(id);
+            const targetUser = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(id));
             if (currentUser.roles !== user_entity_1.UserRole.SUPER_ADMIN && targetUser.estateId?.toString() !== currentUser.estate?._id?.toString()) {
                 throw new common_1.ForbiddenException('Cannot access users from a different estate');
             }
@@ -125,88 +147,88 @@ let UsersController = class UsersController {
                     throw new common_1.ForbiddenException('You do not have permission to update users');
                 }
             }
-            return this.usersService.update(id, updateUserDto);
+            return this.commandBus.execute(new update_user_command_1.UpdateUserCommand(id, updateUserDto));
         }
         throw new common_1.ForbiddenException('You do not have permission to update this resource');
     }
     userUpdateOwnProfile(id, updateProfileDto, currentUserId) {
         if (id === currentUserId) {
-            return this.usersService.update(id, updateProfileDto);
+            return this.commandBus.execute(new update_user_command_1.UpdateUserCommand(id, updateProfileDto));
         }
         throw new common_1.ForbiddenException('You can only update your own profile here');
     }
     async editUser(id, updateUserDto, currentUser) {
-        const userToUpdate = await this.usersService.findOne(id);
+        const userToUpdate = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(id));
         if (currentUser.roles !== user_entity_1.UserRole.SUPER_ADMIN && userToUpdate.estateId?.toString() !== currentUser.estate?._id?.toString()) {
             throw new common_1.ForbiddenException('Cannot update users from a different estate');
         }
         return this.usersService.update(id, updateUserDto);
     }
     async updateUserToAdmin(id, currentUserId, body) {
-        return this.userManagement.makeLandlordAdmin(currentUserId, id, body);
+        return this.commandBus.execute(new promote_landlord_to_admin_command_1.PromoteLandlordToAdminCommand(currentUserId, id, body));
     }
     async demoteAdminToLandlord(id, currentUserId) {
-        return this.userManagement.removeAdminRole(currentUserId, id);
+        return this.commandBus.execute(new remove_admin_role_command_1.RemoveAdminRoleCommand(currentUserId, id));
     }
     async remove(id, currentUser) {
-        const userToRemove = await this.usersService.findOne(id);
+        const userToRemove = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(id));
         if (currentUser.roles !== user_entity_1.UserRole.SUPER_ADMIN && userToRemove.estateId?.toString() !== currentUser.estate?._id?.toString()) {
             throw new common_1.ForbiddenException('Cannot delete users from a different estate');
         }
-        return this.usersService.remove(id);
+        return this.commandBus.execute(new delete_user_command_1.DeleteUserCommand(id));
     }
     async updatePermissions(userId, updatePermissionsDto, currentUser) {
-        const userToUpdate = await this.usersService.findOne(userId);
+        const userToUpdate = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(userId));
         if (currentUser.roles !== user_entity_1.UserRole.SUPER_ADMIN && userToUpdate.estateId?.toString() !== currentUser.estate?._id?.toString()) {
             throw new common_1.ForbiddenException('Cannot update permissions for users in a different estate');
         }
-        return this.userManagement.updateUserPermissions(userId, updatePermissionsDto.permission);
+        return this.commandBus.execute(new update_user_permissions_command_1.UpdateUserPermissionsCommand(userId, updatePermissionsDto.permission));
     }
     async disableTokenGeneration(id, req) {
-        const superAdmin = await this.usersService.findOne(req.user.userId);
+        const superAdmin = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(req.user.userId));
         if (!superAdmin) {
             throw new common_1.NotFoundException('Super admin not found');
         }
         if (!superAdmin.estateId) {
             throw new common_1.NotFoundException('Super admin does not have an estate');
         }
-        const targetUser = await this.usersService.findOne(id);
+        const targetUser = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(id));
         if (!targetUser) {
             throw new common_1.NotFoundException('Target user not found');
         }
         if (targetUser.estateId?.toString() !== superAdmin.estateId.toString()) {
             throw new common_1.ForbiddenException('Cannot disable token generation for users from different estates');
         }
-        return this.usersService.disableTokenGeneration(id);
+        return this.commandBus.execute(new disable_token_generation_command_1.DisableTokenGenerationCommand(id));
     }
     async enableTokenGeneration(id, req) {
-        const superAdmin = await this.usersService.findOne(req.user.userId);
+        const superAdmin = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(req.user.userId));
         if (!superAdmin) {
             throw new common_1.NotFoundException('Super admin not found');
         }
         if (!superAdmin.estateId) {
             throw new common_1.NotFoundException('Super admin does not have an estate');
         }
-        const targetUser = await this.usersService.findOne(id);
+        const targetUser = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(id));
         if (!targetUser) {
             throw new common_1.NotFoundException('Target user not found');
         }
         if (targetUser.estateId?.toString() !== superAdmin.estateId.toString()) {
             throw new common_1.ForbiddenException('Cannot enable token generation for users from different estates');
         }
-        return this.usersService.enableTokenGeneration(id);
+        return this.commandBus.execute(new enable_token_generation_command_1.EnableTokenGenerationCommand(id));
     }
     async registerFcmToken(registerFcmTokenDto, userId) {
-        return this.usersService.registerFcmToken(userId, registerFcmTokenDto.fcmToken);
+        return this.commandBus.execute(new register_fcm_token_command_1.RegisterFcmTokenCommand(userId, registerFcmTokenDto.fcmToken));
     }
     async removeFcmToken(token, userId) {
-        return this.usersService.removeFcmToken(userId, token);
+        return this.commandBus.execute(new remove_fcm_token_command_1.RemoveFcmTokenCommand(userId, token));
     }
     async updateNotificationPreferences(updatePreferencesDto, userId) {
-        return this.usersService.updateNotificationPreferences(userId, updatePreferencesDto);
+        return this.commandBus.execute(new update_notification_preferences_command_1.UpdateNotificationPreferencesCommand(userId, updatePreferencesDto));
     }
     async getNotificationPreferences(userId) {
-        const user = await this.usersService.findOne(userId);
+        const user = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(userId));
         return {
             preferences: user.notificationPreferences || { email: true, push: true, sms: false },
         };
@@ -218,7 +240,7 @@ __decorate([
         summary: 'Create an admin user',
         description: 'Allows Super Admins or Admins with CREATE_ADMINS permission to create a new admin.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'Admin created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 201, type: user_response_dto_1.UserResponseDto, description: 'Admin created successfully' }),
     (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden: Insufficient permissions' }),
     (0, common_1.Post)('create/admin'),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.SUPER_ADMIN, user_entity_1.UserRole.ADMIN),
@@ -234,7 +256,7 @@ __decorate([
         summary: 'Create a landlord user',
         description: 'Allows Super Admins or Admins with CREATE_LANDLORDS permission to create a new landlord.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'Landlord created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 201, type: user_response_dto_1.UserResponseDto, description: 'Landlord created successfully' }),
     (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden: Insufficient permissions' }),
     (0, common_1.Post)('create/landlord'),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.SUPER_ADMIN, user_entity_1.UserRole.ADMIN),
@@ -250,7 +272,7 @@ __decorate([
         summary: 'Create a tenant user',
         description: 'Allows Super Admins, Admins, or Landlords to create a new tenant under them.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'Tenant created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 201, type: user_response_dto_1.UserResponseDto, description: 'Tenant created successfully' }),
     (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden: Insufficient permissions' }),
     (0, common_1.Post)('create/tenant'),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.SUPER_ADMIN, user_entity_1.UserRole.ADMIN, user_entity_1.UserRole.LANDLORD),
@@ -265,7 +287,7 @@ __decorate([
         summary: 'Create a security user',
         description: 'Allows Super Admins or Admins with CREATE_USERS permission to create a new security user.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'Security user created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 201, type: user_response_dto_1.UserResponseDto, description: 'Security user created successfully' }),
     (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden: Insufficient permissions' }),
     (0, common_1.Post)('create/security'),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.SUPER_ADMIN, user_entity_1.UserRole.ADMIN),
@@ -281,7 +303,7 @@ __decorate([
         summary: 'Get all users in the estate',
         description: 'Allows Super Admins or Admins with READ_USERS permission to view all users in their estate.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Users retrieved successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: [user_response_dto_1.UserResponseDto], description: 'Users retrieved successfully' }),
     (0, common_1.Get)('all'),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.SUPER_ADMIN, user_entity_1.UserRole.ADMIN),
     (0, permissions_decorator_1.RequirePermission)(user_entity_1.ResourceType.USERS, user_entity_1.PermissionAction.READ),
@@ -295,7 +317,7 @@ __decorate([
         summary: 'Get user by ID',
         description: 'Allows users to view their own profile, or Admins/Super Admins to view users in their estate.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'User retrieved successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: user_response_dto_1.UserResponseDto, description: 'User retrieved successfully' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'User not found' }),
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
@@ -497,6 +519,8 @@ exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard, roles_guard_1.RolesGuard, permissions_guard_1.PermissionsGuard),
     __metadata("design:paramtypes", [users_service_1.UsersService,
-        user_management_service_1.UserManagementService])
+        user_management_service_1.UserManagementService,
+        cqrs_1.CommandBus,
+        cqrs_1.QueryBus])
 ], UsersController);
 //# sourceMappingURL=users.controller.js.map
