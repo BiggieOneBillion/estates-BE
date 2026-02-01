@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { softDeletePlugin, SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 
 export enum PaymentStatus {
   PENDING = 'pending',
@@ -18,7 +19,11 @@ export enum PaymentMethod {
 }
 
 @Schema({ timestamps: true })
-export class Payment extends Document {
+export class Payment extends Document implements SoftDeleteDocument {
+  isDeleted: boolean;
+  deletedAt?: Date;
+  softDelete: () => Promise<this>;
+  restore: () => Promise<this>;
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   userId: MongooseSchema.Types.ObjectId;
 
@@ -57,6 +62,7 @@ export class Payment extends Document {
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
+PaymentSchema.plugin(softDeletePlugin);
 
 // Indexes for better query performance
 PaymentSchema.index({ userId: 1, levyId: 1 });

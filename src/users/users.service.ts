@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { SoftDeleteModel } from 'src/common/database/soft-delete.plugin';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -17,13 +18,13 @@ import {
   User,
   UserRole,
 } from './entities/user.entity';
-import { MailService } from 'src/common/services/mail.service';
+import { plainToInstance } from 'class-transformer';
+import { UserResponseDto } from 'src/auth/dto/verify-login-response.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(User.name) private readonly userModel: Model<User>,
-    private readonly mailService: MailService,
+    @InjectModel(User.name) private readonly userModel: SoftDeleteModel<User>,
   ) {}
 
 
@@ -39,8 +40,22 @@ export class UsersService {
     return this.userModel.find({ 'adminDetails.position': position }).exec();
   }
 
-  async findByEstate(estateId: string): Promise<User[]> {
-    return this.userModel.find({ estateId });
+  async findByEstate(estateId: string): Promise<UserResponseDto[]> {
+    console.log({estateId});
+    const users = await this.userModel.find({ estateId: estateId });
+    console.log({users});
+
+    if (!users) {
+      throw new NotFoundException(`No users found for estate ${estateId}`);
+    }
+
+    const filteredUsers = users.map((user) => {
+      return plainToInstance(UserResponseDto, user, {
+        excludeExtraneousValues: true,
+      });
+    });
+
+    return filteredUsers;
   }
 
   async findOne(id: string): Promise<User> {
@@ -83,8 +98,8 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.userModel.deleteOne({ _id: id }).exec();
-    if (result.deletedCount === 0) {
+    const result = await this.userModel.softDelete({ _id: id });
+    if (result.matchedCount === 0) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
   }

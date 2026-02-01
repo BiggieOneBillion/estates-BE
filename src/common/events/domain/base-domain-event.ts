@@ -1,5 +1,5 @@
 // src/common/events/domain/base-domain-event.ts
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 export interface DomainEventMetadata {
   userId?: string;
@@ -19,10 +19,10 @@ export abstract class BaseDomainEvent {
     public readonly aggregateType: string,
     metadata: DomainEventMetadata = {},
   ) {
-    this.eventId = uuidv4();
+    this.eventId = randomUUID();
     this.occurredAt = new Date();
     this.metadata = {
-      correlationId: metadata.correlationId || uuidv4(),
+      correlationId: metadata.correlationId || randomUUID(),
       ...metadata,
     };
   }

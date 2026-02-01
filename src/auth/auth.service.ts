@@ -14,7 +14,6 @@ import { RegisterDto } from './dto/register.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserRole } from 'src/users/entities/user.entity';
 import { Model } from 'mongoose';
-import { MailService } from 'src/common/services/mail.service';
 import { UserResponseDto, VerifyLoginResponseDto } from './dto/verify-login-response.dto';
 import { plainToInstance } from "class-transformer"
 import { EventPublisher } from 'src/common/events/services/event-publisher.service';
@@ -23,6 +22,8 @@ import {
   UserLoggedInEvent,
   UserPasswordResetRequestedEvent,
   UserVerifiedEvent,
+  UserVerificationEmailRequestedEvent,
+  UserSecurityAlertEvent,
 } from 'src/common/events/domain/user-events';
 
 @Injectable()
@@ -33,7 +34,6 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     @InjectModel(User.name) private readonly userModel: Model<User>,
-    private mailService: MailService,
     private eventPublisher: EventPublisher,
   ) {}
 
@@ -73,12 +73,19 @@ export class AuthService {
         // estate: user.estate,
       };
 
-      // here we resend the email to the user and tell them to verify their email
-      await this.mailService.sendVerificationEmail(
-        user.email,
-        user.verificationToken!,
-        `${user.firstName} ${user.lastName}`,
-      );
+      // Use transaction to publish event atomically
+      const session = await this.userModel.db.startSession();
+      await session.withTransaction(async () => {
+        // Publish UserVerificationEmailRequestedEvent
+        const event = new UserVerificationEmailRequestedEvent({
+          userId: user._id as string,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          verificationToken: user.verificationToken!,
+        });
+        await this.eventPublisher.publish(event, session);
+      });
       // Return custom response instead of throwing exception
       return {
         status: 222,
@@ -156,13 +163,6 @@ export class AuthService {
 
     console.log('Login Verification token---', verificationToken);
 
-    // Send verification email
-    // await this.mailService.sendVerificationEmail(
-    //   email,
-    //   verificationToken,
-    //   `${user.firstName} ${user.lastName}`,
-    // );
-
     // Remove password from returned user
     const userObject = user.toObject();
     delete userObject.password;
@@ -223,7 +223,7 @@ export class AuthService {
       type: 'auth',
       isVerified: true,
       version: user.tokenVersion,
-      // estate: user.estate,
+      estate: user?.estateId?.toString(),
     };
 
     const userInstance = plainToInstance(UserResponseDto, user, {
@@ -289,12 +289,6 @@ export class AuthService {
       await this.eventPublisher.publish(event, session);
     });
 
-    // await this.mailService.sendVerificationEmail(
-    //   registerDto.email,
-    //   verificationToken,
-    //   `${registerDto.firstName} ${registerDto.lastName}`,
-    // );
-    // console.log('E no easye');
     const resObj = {
       firstName: savedUser.firstName,
       lastName: savedUser.lastName,
@@ -320,7 +314,7 @@ export class AuthService {
       type: 'auth',
       isVerified: false, // Registration still needs email verification
       version: 0, // Initial version
-      estate: user.estate,
+      // estate: user?.estateId?.toString(),
     };
 
     // console.log('PAYLOAD', payload);
@@ -389,12 +383,19 @@ export class AuthService {
       // Increment version to invalidate all current tokens
       user.tokenVersion += 1;
       
-      // Notify user of device change
-      await this.mailService.sendBasicEmail(
-        user.email,
-        'Security Alert: New Device Login',
-        `Hello ${user.firstName}, you have successfully switched your active session to a new device. Previous sessions have been logged out for your security.`,
-      );
+      // Publish Security Alert event
+      const event = new UserSecurityAlertEvent({
+        userId: user._id as string,
+        email: user.email,
+        firstName: user.firstName,
+        alertType: 'device_switch',
+        details: 'you have successfully switched your active session to a new device. Previous sessions have been logged out for your security.',
+      });
+      // Case where we are already in a potential session or need a new one
+      // verifyPreAuth doesn't currently use a transaction for user.save(), 
+      // but eventPublisher.publish should ideally have one.
+      // For now, publishing without explicit session as per existing verifyPreAuth pattern
+      await this.eventPublisher.publish(event);
     }
 
     user.isActive = true;
@@ -409,7 +410,7 @@ export class AuthService {
       type: 'auth',
       isVerified: true,
       version: user.tokenVersion,
-      // estate: user.estate,
+      estate: user?.estateId?.toString(),
     };
 
     const userInstance = plainToInstance(UserResponseDto, user, {
@@ -450,15 +451,8 @@ export class AuthService {
         lastName: user.lastName,
         resetToken: resetOTP,
       });
-      await this.eventPublisher.publish(event, session);
+      // await this.eventPublisher.publish(event, session);
     });
-
-    // Send the OTP via email
-    // await this.mailService.sendPasswordResetEmail(
-    //   email,
-    //   resetOTP,
-    //   `${user.firstName} ${user.lastName}`,
-    // );
 
     return { message: 'Password reset OTP has been sent to your email' };
   }
@@ -528,5 +522,20 @@ export class AuthService {
       }
       throw error;
     }
+  }
+
+  async logout(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    user.isActive = false;
+    user.tokenVersion += 1; // Invalidate all current tokens
+    await user.save();
+
+    this.logger.log(`User logged out: ${user.email}`);
+
+    return { message: 'Logout successful' };
   }
 }

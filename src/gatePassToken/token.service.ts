@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { SoftDeleteModel } from 'src/common/database/soft-delete.plugin';
 import { CreateTokenDto } from './dto/create-token.dto';
 import { UpdateTokenDto } from './dto/update-token.dto';
 import {
@@ -25,7 +26,7 @@ export class TokenService {
   private readonly logger = new Logger(TokenService.name);
 
   constructor(
-    @InjectModel(Token.name) private readonly tokenModel: Model<Token>,
+    @InjectModel(Token.name) private readonly tokenModel: SoftDeleteModel<Token>,
     private readonly eventEmitter: EventEmitter2,
     private readonly userService: UsersService,
     private readonly complianceService: ComplianceService,
@@ -397,8 +398,8 @@ export class TokenService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.tokenModel.deleteOne({ _id: id }).exec();
-    if (result.deletedCount === 0) {
+    const result = await this.tokenModel.softDelete({ _id: id });
+    if (result.matchedCount === 0) {
       throw new NotFoundException(`Token with ID ${id} not found`);
     }
   }

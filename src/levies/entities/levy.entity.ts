@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { softDeletePlugin, SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 import { UserRole } from '../../users/entities/user.entity';
 
 export enum LevyType {
@@ -16,7 +17,11 @@ export enum LevyStatus {
 }
 
 @Schema({ timestamps: true })
-export class Levy extends Document {
+export class Levy extends Document implements SoftDeleteDocument {
+  isDeleted: boolean;
+  deletedAt?: Date;
+  softDelete: () => Promise<this>;
+  restore: () => Promise<this>;
   @Prop({ required: true })
   title: string;
 
@@ -59,6 +64,7 @@ export class Levy extends Document {
 }
 
 export const LevySchema = SchemaFactory.createForClass(Levy);
+LevySchema.plugin(softDeletePlugin);
 
 // Indexes for better query performance
 LevySchema.index({ estateId: 1, isActive: 1 });

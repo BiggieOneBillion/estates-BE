@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Mongoose, Schema as MongooseSchema } from 'mongoose';
+import { softDeletePlugin, SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 
 export enum SubscriptionPlan {
   MONTHLY = 'monthly',
@@ -16,7 +17,11 @@ export enum SubscriptionStatus {
 const now = new Date();
 
 @Schema({ timestamps: true })
-export class Estate extends Document {
+export class Estate extends Document implements SoftDeleteDocument {
+  isDeleted: boolean;
+  deletedAt?: Date;
+  softDelete: () => Promise<this>;
+  restore: () => Promise<this>;
   @Prop({
     required: true,
     unique: true,
@@ -109,3 +114,4 @@ export class Estate extends Document {
 }
 
 export const EstateSchema = SchemaFactory.createForClass(Estate);
+EstateSchema.plugin(softDeletePlugin);

@@ -47,9 +47,9 @@ export const ERROR_MAPS: Record<string, ErrorMap> = {
 /**
  * Normalizes an error name or code into a public ErrorMap object.
  */
-export function normalizeError(errorName: string, defaultMessage?: string): ErrorMap {
-  // Check for specific Mongo error codes
-  if (errorName.includes('E11000')) {
+export function normalizeError(errorName: string, message?: string): ErrorMap {
+  // Check for specific Mongo error codes in name or message
+  if (errorName?.includes('E11000') || message?.includes('E11000')) {
     return ERROR_MAPS['MongoServerError: 11000'];
   }
 
@@ -61,6 +61,6 @@ export function normalizeError(errorName: string, defaultMessage?: string): Erro
   return {
     statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
     type: 'UNKNOWN_ERROR',
-    message: defaultMessage || ERROR_MAPS['InternalServerError'].message,
+    message: message || ERROR_MAPS['InternalServerError'].message,
   };
 }

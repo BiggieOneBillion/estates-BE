@@ -7,12 +7,25 @@ export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
 
   async connectToRedis(): Promise<void> {
-    const pubClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
+    const url = process.env.REDIS_URL || 'redis://localhost:6379';
+    const pubClient = createClient({ 
+      url,
+      socket: {
+        connectTimeout: 5000,
+      }
+    });
+
+    pubClient.on('error', (err) => console.error('Redis PubClient Error', err));
     const subClient = pubClient.duplicate();
+    subClient.on('error', (err) => console.error('Redis SubClient Error', err));
 
-    await Promise.all([pubClient.connect(), subClient.connect()]);
-
-    this.adapterConstructor = createAdapter(pubClient, subClient);
+    try {
+      await Promise.all([pubClient.connect(), subClient.connect()]);
+      this.adapterConstructor = createAdapter(pubClient, subClient);
+    } catch (error) {
+      console.error('Failed to connect to Redis:', error.message);
+      throw error;
+    }
   }
 
   createIOServer(port: number, options?: ServerOptions): any {

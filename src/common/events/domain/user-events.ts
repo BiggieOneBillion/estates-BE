@@ -104,3 +104,66 @@ export class UserPasswordResetCompletedEvent extends BaseDomainEvent {
     return this.data;
   }
 }
+
+export interface UserVerificationEmailRequestedPayload {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  verificationToken: string;
+}
+
+export class UserVerificationEmailRequestedEvent extends BaseDomainEvent {
+  constructor(
+    private readonly data: UserVerificationEmailRequestedPayload,
+    metadata?: DomainEventMetadata,
+  ) {
+    super('user.verification_email_requested', data.userId, 'User', metadata);
+  }
+
+  getPayload(): UserVerificationEmailRequestedPayload {
+    return this.data;
+  }
+}
+
+export interface UserSecurityAlertPayload {
+  userId: string;
+  email: string;
+  firstName: string;
+  alertType: 'device_switch' | 'suspicious_activity';
+  details: string;
+}
+
+export class UserSecurityAlertEvent extends BaseDomainEvent {
+  constructor(
+    private readonly data: UserSecurityAlertPayload,
+    metadata?: DomainEventMetadata,
+  ) {
+    super('user.security_alert', data.userId, 'User', metadata);
+  }
+
+  getPayload(): UserSecurityAlertPayload {
+    return this.data;
+  }
+}
+
+export interface UserAccountCreatedPayload {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  password?: string;
+}
+
+export class UserAccountCreatedEvent extends BaseDomainEvent {
+  constructor(
+    private readonly data: UserAccountCreatedPayload,
+    metadata?: DomainEventMetadata,
+  ) {
+    super('user.account_created', data.userId, 'User', metadata);
+  }
+
+  getPayload(): UserAccountCreatedPayload {
+    return this.data;
+  }
+}

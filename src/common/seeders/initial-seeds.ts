@@ -17,6 +17,7 @@ export class InitialSeedService {
   ) {}
 
   async seed() {
+    this.logger.log('Starting seed check...');
     const userCount = await this.userModel.countDocuments();
     if (userCount > 0) {
       this.logger.log('Database already seeded');

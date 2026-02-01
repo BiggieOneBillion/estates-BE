@@ -44,11 +44,16 @@ import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdatePermissionsDto } from './dto/update-permissions.dto';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
+import { UserResponseDto } from 'src/auth/dto/verify-login-response.dto';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { RequirePermission } from 'src/auth/decorators/permissions.decorator';
+import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
+import { User as UserEntity } from './entities/user.entity';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')
-@UseGuards(JwtAuthGuard, VerifiedGuard)
+@UseGuards(JwtAuthGuard, VerifiedGuard, RolesGuard, PermissionsGuard)
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
@@ -62,41 +67,18 @@ export class UsersController {
   @ApiResponse({ status: 201, description: 'Admin created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/admin')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async createAdmins(@Body() createAdminDto: CreateAdminDto, @Request() req) {
+  @RequirePermission(ResourceType.ADMINS, PermissionAction.CREATE)
+  async createAdmins(
+    @Body() createAdminDto: CreateAdminDto,
+    @CurrentUser() user: any,
+  ) {
     if (createAdminDto.primaryRole !== UserRole.ADMIN) {
       throw new ForbiddenException('You can only create an admin user');
     }
-    const { userId, roles } = req.user;
-    const user = await this.usersService.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (roles === UserRole.ADMIN) {
-      if (!user.grantedPermissions) {
-        throw new ForbiddenException(
-          'You do not have permission to create users',
-        );
-      }
-      const requiredPermission = user.grantedPermissions!.filter(
-        (permission) =>
-          permission.actions.includes(PermissionAction.CREATE) &&
-          permission.resource === ResourceType.ADMINS,
-      );
-      if (requiredPermission.length === 0) {
-        throw new ForbiddenException(
-          'You do not have permission to create users',
-        );
-      }
-    }
-
-    if (!user?.estateId) {
-      throw new ForbiddenException('You cannot create admin before estate is created');
-    }
     
     return this.userManagement.createAdmin(
-      userId,
+      user.userId,
       {
         firstName: createAdminDto.firstName,
         lastName: createAdminDto.lastName,
@@ -105,10 +87,8 @@ export class UsersController {
         position: createAdminDto.adminDetails!.position,
         customPositionTitle: createAdminDto.adminDetails?.customPositionTitle,
         department: createAdminDto.adminDetails?.department,
-        additionalPermissions:
-          createAdminDto.adminDetails?.additionalPermissions,
+        additionalPermissions: createAdminDto.adminDetails?.additionalPermissions,
       },
-      user.estateId!.toString(),
     );
   }
 
@@ -119,38 +99,16 @@ export class UsersController {
   @ApiResponse({ status: 201, description: 'Landlord created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/landlord')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @RequirePermission(ResourceType.LANDLORDS, PermissionAction.CREATE)
   async createLandLord(
-    @Body()
-    createLandlordDto: CreateLandlordDto,
-    @Request() req,
+    @Body() createLandlordDto: CreateLandlordDto,
+    @CurrentUser('userId') userId: string,
   ) {
     if (createLandlordDto.primaryRole !== UserRole.LANDLORD) {
       throw new ForbiddenException('You can only create a landlord');
     }
-    const { userId, roles } = req.user;
-    const user = await this.usersService.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (roles === UserRole.ADMIN) {
-      if (!user.grantedPermissions) {
-        throw new ForbiddenException(
-          'You do not have permission to create users',
-        );
-      }
-      const requiredPermission = user.grantedPermissions!.filter(
-        (permission) =>
-          permission.actions.includes(PermissionAction.CREATE) &&
-          permission.resource === ResourceType.LANDLORDS,
-      );
-      if (requiredPermission.length === 0) {
-        throw new ForbiddenException(
-          'You do not have permission to create users',
-        );
-      }
-    }
+
     return this.userManagement.createLandlord(
       userId,
       {
@@ -160,7 +118,6 @@ export class UsersController {
         phone: createLandlordDto.phone,
         canCreateTenants: createLandlordDto.canCreateTenants,
       },
-      user.estateId!.toString(),
     );
   }
 
@@ -171,32 +128,17 @@ export class UsersController {
   @ApiResponse({ status: 201, description: 'Tenant created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/tenant')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LANDLORD)
-  async createTenant(@Body() createTenantDto: CreateTenantDto, @Request() req) {
+  async createTenant(
+    @Body() createTenantDto: CreateTenantDto,
+    @CurrentUser('userId') userId: string,
+  ) {
     if (createTenantDto.primaryRole !== UserRole.TENANT) {
       throw new ForbiddenException('You can only create a tenant');
     }
-    const { userId, roles } = req.user;
-    const user = await this.usersService.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    const targetLandlordId = createTenantDto.tenantDetails.landlordId;
 
-    if (roles === UserRole.LANDLORD || roles === UserRole.ADMIN) {
-      if (targetLandlordId !== userId && roles !== UserRole.SUPER_ADMIN) {
-        // Simple admins can only create for themselves if they are landlords, 
-        // or we need a more complex permission check. 
-        // For now, let's stick to the original restriction or Super Admin power.
-        const canCreateForOthers = roles === UserRole.ADMIN && 
-          user.grantedPermissions?.some(p => p.resource === ResourceType.USERS && p.actions.includes(PermissionAction.CREATE));
-        
-        if (!canCreateForOthers && targetLandlordId !== userId) {
-          throw new ForbiddenException('You can only create tenants under your own account');
-        }
-      }
-    }
+    // Business logic: only landlord themselves or authorized admins can create tenants
+    const targetLandlordId = createTenantDto.tenantDetails.landlordId;
 
     return this.userManagement.createTenant(
       targetLandlordId,
@@ -213,7 +155,6 @@ export class UsersController {
           ? new Date(createTenantDto.tenantDetails.leaseEndDate)
           : undefined,
       },
-      user.estateId!.toString(),
     );
   }
 
@@ -224,35 +165,12 @@ export class UsersController {
   @ApiResponse({ status: 201, description: 'Security user created successfully' })
   @ApiResponse({ status: 403, description: 'Forbidden: Insufficient permissions' })
   @Post('create/security')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @RequirePermission(ResourceType.USERS, PermissionAction.CREATE)
   async createSecurity(
-    @Body()
-    createSecurityDto: CreateSecurityDto,
-    @Request() req,
+    @Body() createSecurityDto: CreateSecurityDto,
+    @CurrentUser('userId') userId: string,
   ) {
-    const { userId, roles } = req.user;
-    const user = await this.usersService.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (roles === UserRole.ADMIN) {
-      if (!user.grantedPermissions) {
-        throw new ForbiddenException(
-          'You do not have permission to create users',
-        );
-      }
-      const requiredPermission = user.grantedPermissions!.filter(
-        (permission) =>
-          permission.actions.includes(PermissionAction.CREATE) &&
-          permission.resource === ResourceType.USERS,
-      );
-      if (requiredPermission.length === 0) {
-        throw new ForbiddenException(
-          'You do not have permission to create users',
-        );
-      }
-    }
     return this.userManagement.createSecurity(
       userId,
       {
@@ -261,7 +179,6 @@ export class UsersController {
         email: createSecurityDto.email,
         phone: createSecurityDto.phone,
       },
-      user.estateId!.toString(),
     );
   }
 
@@ -321,39 +238,14 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   @Get('all')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async findAll(@Request() req) {
-    const { userId, roles } = req.user;
-    const user = await this.usersService.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
+  @RequirePermission(ResourceType.USERS, PermissionAction.READ)
+  async findAll(@CurrentUser('estate') estate: string) {
+    console.log({estate});
+    if (!estate) {
+      throw new ForbiddenException('You must belong to an estate');
     }
-
-    if (user && !user.estateId) {
-      throw new NotFoundException('User does not have an estate');
-    }
-
-    if (roles === UserRole.ADMIN) {
-      if (!user.grantedPermissions) {
-        throw new ForbiddenException(
-          'You do not have permission to access users data',
-        );
-      }
-      const requiredPermission = user.grantedPermissions!.filter(
-        (permission) =>
-          permission.actions.includes(PermissionAction.MANAGE) ||
-          (permission.actions.includes(PermissionAction.READ) &&
-            permission.resource === ResourceType.USERS),
-      );
-      if (requiredPermission.length === 0) {
-        throw new ForbiddenException(
-          'You do not have permission to access users data',
-        );
-      }
-    }
-
-    return this.usersService.findByEstate(user.estateId!.toString());
+    return this.usersService.findByEstate(estate.toString());
   }
 
   @ApiOperation({
@@ -363,49 +255,26 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @Get(':id')
-  async findOne(@Param('id') id: string, @Request() req) {
-    if (
-      id === req.user.userId ||
-      req.user.roles.includes(UserRole.SUPER_ADMIN) ||
-      req.user.roles.includes(UserRole.ADMIN)
-    ) {
-      if (req.user.roles === UserRole.ADMIN) {
-        const requiredPermission = req.user.grantedPermissions!.filter(
-          (permission) =>
-            permission.actions.includes(PermissionAction.READ) &&
-            permission.resource === ResourceType.USERS,
-        );
-        if (requiredPermission.length === 0) {
-          throw new ForbiddenException('Cannot view users details');
-        }
-      }
-
-      if (req.user.roles === UserRole.SUPER_ADMIN) {
-        const user = await this.usersService.findOne(req.user.userId);
-
-        if (!user) {
-          throw new NotFoundException('User not found');
-        }
-
-        const usersFromEstate = await this.usersService.findByEstate(
-          user.estateId!.toString(),
-        );
-        const userExist = usersFromEstate.find((user) => user.id === id);
-
-        if (!userExist) {
-          throw new NotFoundException(
-            'User not found, Cannot access user in another estate',
-          );
-        }
-
-        return this.usersService.findOne(id);
-      }
-
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: any,
+  ) {
+    if (id === currentUser.userId) {
       return this.usersService.findOne(id);
     }
-    throw new ForbiddenException(
-      'You do not have permission to access this resource',
-    );
+
+    // Admins and Super Admins can see others
+    if ([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SITE_ADMIN].includes(currentUser.roles)) {
+       // PermissionsGuard will handle granular check if we wanted it, but findOne is usually basic.
+       // We should still ensure estate scope.
+       const targetUser = await this.usersService.findOne(id);
+       if (currentUser.roles !== UserRole.SUPER_ADMIN && targetUser.estateId?.toString() !== currentUser.estate?._id?.toString()) {
+         throw new ForbiddenException('Cannot access users from a different estate');
+       }
+       return targetUser;
+    }
+
+    throw new ForbiddenException('You do not have permission to access this resource');
   }
 
   @ApiOperation({
@@ -453,16 +322,13 @@ export class UsersController {
   @Patch(':id')
   userUpdateOwnProfile(
     @Param('id') id: string,
-    @Body()
-    updateProfileDto: UpdateProfileDto,
-    @Request() req,
+    @Body() updateProfileDto: UpdateProfileDto,
+    @CurrentUser('userId') currentUserId: string,
   ) {
-    if (id === req.user.userId) {
+    if (id === currentUserId) {
       return this.usersService.update(id, updateProfileDto);
     }
-    throw new ForbiddenException(
-      'You do not have permission to update this resource',
-    );
+    throw new ForbiddenException('You can only update your own profile here');
   }
 
   @ApiOperation({
@@ -471,43 +337,17 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'User edited successfully' })
   @Put(':id')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @RequirePermission(ResourceType.USERS, PermissionAction.UPDATE)
   async editUser(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
-    @Request() req,
+    @CurrentUser() currentUser: any,
   ) {
-    const { userId, roles } = req.user;
-
-    const requester = await this.usersService.findOne(userId);
-    if (!requester) {
-      throw new NotFoundException('Requesting user not found.');
-    }
-
     const userToUpdate = await this.usersService.findOne(id);
-    if (!userToUpdate) {
-      throw new NotFoundException(`User with ID ${id} not found.`);
-    }
-
-    if (requester.estateId?.toString() !== userToUpdate.estateId?.toString()) {
-      throw new ForbiddenException(
-        'Cannot update users from a different estate.',
-      );
-    }
-
-    if (
-      roles === UserRole.ADMIN &&
-      id !== userId &&
-      !requester.grantedPermissions?.some(
-        (p) =>
-          p.resource === ResourceType.USERS &&
-          p.actions.includes(PermissionAction.UPDATE),
-      )
-    ) {
-      throw new ForbiddenException(
-        'You do not have permission to update other users.',
-      );
+    
+    if (currentUser.roles !== UserRole.SUPER_ADMIN && userToUpdate.estateId?.toString() !== currentUser.estate?._id?.toString()) {
+      throw new ForbiddenException('Cannot update users from a different estate');
     }
 
     return this.usersService.update(id, updateUserDto);
@@ -519,33 +359,13 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'User promoted successfully' })
   @Patch('update/to-admin/:id')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
   async updateUserToAdmin(
     @Param('id') id: string,
-    @Request() req,
+    @CurrentUser('userId') currentUserId: string,
     @Body() body: CreateAdminDetailsDto,
   ) {
-    const user = await this.usersService.findOne(req.user.userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (!user.estateId) {
-      throw new NotFoundException('User does not have an estate');
-    }
-    const userInEstate = await this.usersService.findByEstate(
-      user.estateId!.toString(),
-    );
-
-    const userExistInEstate = userInEstate.find((user) => user.id === id);
-
-    if (!userExistInEstate) {
-      throw new NotFoundException(
-        'User not found, Cannot access user in another estate',
-      );
-    }
-
-    return this.userManagement.makeLandlordAdmin(req.user.userId, id, body);
+    return this.userManagement.makeLandlordAdmin(currentUserId, id, body);
   }
 
   @ApiOperation({
@@ -553,30 +373,13 @@ export class UsersController {
     description: 'Allows Super Admins to remove admin role from a user.',
   })
   @ApiResponse({ status: 200, description: 'User demoted successfully' })
-  @Patch('update/demote-admin/:id')
-  @UseGuards(RolesGuard)
+  @Patch('demote/to-landlord/:id')
   @Roles(UserRole.SUPER_ADMIN)
-  async demoteAdminToLandlord(@Param('id') id: string, @Request() req) {
-    const user = await this.usersService.findOne(req.user.userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    if (!user.estateId) {
-      throw new NotFoundException('User does not have an estate');
-    }
-    const userInEstate = await this.usersService.findByEstate(
-      user.estateId!.toString(),
-    );
-
-    const userExistInEstate = userInEstate.find((user) => user.id === id);
-
-    if (!userExistInEstate) {
-      throw new NotFoundException(
-        'User not found, Cannot access user in another estate',
-      );
-    }
-
-    return this.userManagement.removeAdminRole(req.user.userId, id);
+  async demoteAdminToLandlord(
+    @Param('id') id: string,
+    @CurrentUser('userId') currentUserId: string,
+  ) {
+    return this.userManagement.removeAdminRole(currentUserId, id);
   }
 
   @ApiOperation({
@@ -585,9 +388,18 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
-  remove(@Param('id') id: string) {
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @RequirePermission(ResourceType.USERS, PermissionAction.DELETE)
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: any,
+  ) {
+    const userToRemove = await this.usersService.findOne(id);
+
+    if (currentUser.roles !== UserRole.SUPER_ADMIN && userToRemove.estateId?.toString() !== currentUser.estate?._id?.toString()) {
+      throw new ForbiddenException('Cannot delete users from a different estate');
+    }
+
     return this.usersService.remove(id);
   }
 
@@ -596,39 +408,24 @@ export class UsersController {
     description: 'Allows Super Admins to granularly update user permissions.',
   })
   @ApiResponse({ status: 200, description: 'Permissions updated successfully' })
-  @Post('update/permission/:id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Patch('permissions/:userId')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @RequirePermission(ResourceType.ADMINS, PermissionAction.MANAGE)
   async updatePermissions(
-    @Body()
-    updatePermissionsDto: UpdatePermissionsDto,
-    @Request() req,
+    @Param('userId') userId: string,
+    @Body() updatePermissionsDto: UpdatePermissionsDto,
+    @CurrentUser() currentUser: any,
   ) {
-    const { userId } = req.user;
-    const user = await this.usersService.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('User not found');
+    const userToUpdate = await this.usersService.findOne(userId);
+    
+    if (currentUser.roles !== UserRole.SUPER_ADMIN && userToUpdate.estateId?.toString() !== currentUser.estate?._id?.toString()) {
+      throw new ForbiddenException('Cannot update permissions for users in a different estate');
     }
 
-    let usersFromEstate: User[] | undefined;
-
-    try {
-      usersFromEstate = await this.usersService.findByEstate(
-        user.estateId!.toString(),
-      );
-    } catch {
-      throw new NotFoundException('User does not have an estate');
-    }
-
-    const userExist = usersFromEstate.find((user) => user.id === updatePermissionsDto.id);
-
-    if (!userExist) {
-      throw new NotFoundException(
-        'User not found, Cannot access user in another estate',
-      );
-    }
-
-    return this.userManagement.updateUserPermissions(updatePermissionsDto.id, updatePermissionsDto.permission);
+    return this.userManagement.updateUserPermissions(
+      userId,
+      updatePermissionsDto.permission,
+    );
   }
 
   @ApiOperation({
@@ -703,9 +500,8 @@ export class UsersController {
   @Post('fcm-token')
   async registerFcmToken(
     @Body() registerFcmTokenDto: RegisterFcmTokenDto,
-    @Request() req,
+    @CurrentUser('userId') userId: string,
   ) {
-    const userId = req.user.userId;
     return this.usersService.registerFcmToken(userId, registerFcmTokenDto.fcmToken);
   }
 
@@ -715,8 +511,10 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'FCM token removed successfully' })
   @Delete('fcm-token/:token')
-  async removeFcmToken(@Param('token') token: string, @Request() req) {
-    const userId = req.user.userId;
+  async removeFcmToken(
+    @Param('token') token: string,
+    @CurrentUser('userId') userId: string,
+  ) {
     return this.usersService.removeFcmToken(userId, token);
   }
 
@@ -728,9 +526,8 @@ export class UsersController {
   @Patch('notification-preferences')
   async updateNotificationPreferences(
     @Body() updatePreferencesDto: UpdateNotificationPreferencesDto,
-    @Request() req,
+    @CurrentUser('userId') userId: string,
   ) {
-    const userId = req.user.userId;
     return this.usersService.updateNotificationPreferences(userId, updatePreferencesDto);
   }
 
@@ -740,8 +537,7 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'Notification preferences retrieved successfully' })
   @Get('notification-preferences/me')
-  async getNotificationPreferences(@Request() req) {
-    const userId = req.user.userId;
+  async getNotificationPreferences(@CurrentUser('userId') userId: string) {
     const user = await this.usersService.findOne(userId);
     return {
       preferences: user.notificationPreferences || { email: true, push: true, sms: false },

@@ -17,6 +17,9 @@ import {
   UserLoggedInHandler,
   UserPasswordResetRequestedHandler,
   UserPasswordResetCompletedHandler,
+  UserVerificationEmailRequestedHandler,
+  UserSecurityAlertHandler,
+  UserAccountCreatedHandler,
 } from './handlers/user-event.handlers';
 import {
   PaymentInitiatedHandler,
@@ -31,6 +34,7 @@ import {
   LevyPaidHandler,
 } from './handlers/levy-event.handlers';
 import { MailService } from '../services/mail.service';
+import { AuditLogHandler } from 'src/audit-logs/handlers/audit-log.handler';
 
 @Module({
   imports: [
@@ -48,12 +52,18 @@ import { MailService } from '../services/mail.service';
     OutboxProcessorWorker,
     MailService,
 
+    // Audit handler
+    AuditLogHandler,
+
     // User event handlers
     UserCreatedHandler,
     UserVerifiedHandler,
     UserLoggedInHandler,
     UserPasswordResetRequestedHandler,
     UserPasswordResetCompletedHandler,
+    UserVerificationEmailRequestedHandler,
+    UserSecurityAlertHandler,
+    UserAccountCreatedHandler,
 
     // Payment event handlers
     PaymentInitiatedHandler,
@@ -78,6 +88,9 @@ export class EventsInfrastructureModule {
     private readonly userLoggedInHandler: UserLoggedInHandler,
     private readonly userPasswordResetRequestedHandler: UserPasswordResetRequestedHandler,
     private readonly userPasswordResetCompletedHandler: UserPasswordResetCompletedHandler,
+    private readonly userVerificationEmailRequestedHandler: UserVerificationEmailRequestedHandler,
+    private readonly userSecurityAlertHandler: UserSecurityAlertHandler,
+    private readonly userAccountCreatedHandler: UserAccountCreatedHandler,
     // Payment handlers
     private readonly paymentInitiatedHandler: PaymentInitiatedHandler,
     private readonly paymentCompletedHandler: PaymentCompletedHandler,
@@ -88,6 +101,7 @@ export class EventsInfrastructureModule {
     private readonly levyDueReminderHandler: LevyDueReminderHandler,
     private readonly levyOverdueHandler: LevyOverdueHandler,
     private readonly levyPaidHandler: LevyPaidHandler,
+    private readonly auditLogHandler: AuditLogHandler,
   ) {
     // Register all handlers on module initialization
     this.registerHandlers();
@@ -101,6 +115,9 @@ export class EventsInfrastructureModule {
       this.userLoggedInHandler,
       this.userPasswordResetRequestedHandler,
       this.userPasswordResetCompletedHandler,
+      this.userVerificationEmailRequestedHandler,
+      this.userSecurityAlertHandler,
+      this.userAccountCreatedHandler,
       // Payment handlers
       this.paymentInitiatedHandler,
       this.paymentCompletedHandler,
@@ -112,5 +129,19 @@ export class EventsInfrastructureModule {
       this.levyOverdueHandler,
       this.levyPaidHandler,
     ]);
+
+    // Register AuditLogHandler for all event types
+    const eventTypes = [
+      'user.created', 'user.verified', 'user.logged_in', 
+      'user.password_reset_requested', 'user.password_reset_completed',
+      'user.verification_email_requested', 'user.security_alert',
+      'user.account_created',
+      'payment.initiated', 'payment.completed', 'payment.failed', 'payment.refunded',
+      'levy.created', 'levy.due_reminder', 'levy.overdue', 'levy.paid'
+    ];
+    
+    eventTypes.forEach(type => {
+      this.eventDispatcher.registerHandler(type, this.auditLogHandler);
+    });
   }
 }
