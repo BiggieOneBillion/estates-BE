@@ -51,6 +51,9 @@ export class OutboxEvent extends Document {
 
   @Prop({ type: Object })
   metadata?: Record<string, any>;
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const OutboxEventSchema = SchemaFactory.createForClass(OutboxEvent);

@@ -7,6 +7,9 @@ import {
   UserLoggedInEvent,
   UserPasswordResetRequestedEvent,
   UserPasswordResetCompletedEvent,
+  UserVerificationEmailRequestedEvent,
+  UserSecurityAlertEvent,
+  UserAccountCreatedEvent,
 } from '../domain/user-events';
 import { MailService } from '../../services/mail.service';
 
@@ -216,5 +219,117 @@ export class UserPasswordResetCompletedHandler
 
   getHandlerName(): string {
     return 'UserPasswordResetCompletedHandler';
+  }
+}
+
+@Injectable()
+export class UserVerificationEmailRequestedHandler
+  implements EventHandler<UserVerificationEmailRequestedEvent>
+{
+  private readonly logger = new Logger(UserVerificationEmailRequestedHandler.name);
+
+  constructor(private readonly mailService: MailService) {}
+
+  async handle(event: UserVerificationEmailRequestedEvent): Promise<void> {
+    const payload = event.getPayload();
+
+    this.logger.log(
+      `Handling UserVerificationEmailRequestedEvent for user ${payload.email}`,
+    );
+
+    await this.mailService.sendVerificationEmail(
+      payload.email,
+      payload.verificationToken,
+      `${payload.firstName} ${payload.lastName}`,
+    );
+
+    this.logger.log(`Verification email re-sent successfully to ${payload.email}`);
+  }
+
+  getEventType(): string {
+    return 'user.verification_email_requested';
+  }
+
+  getHandlerName(): string {
+    return 'UserVerificationEmailRequestedHandler';
+  }
+}
+
+@Injectable()
+export class UserSecurityAlertHandler
+  implements EventHandler<UserSecurityAlertEvent>
+{
+  private readonly logger = new Logger(UserSecurityAlertHandler.name);
+
+  constructor(private readonly mailService: MailService) {}
+
+  async handle(event: UserSecurityAlertEvent): Promise<void> {
+    const payload = event.getPayload();
+
+    this.logger.log(`Handling UserSecurityAlertEvent for user ${payload.email}`);
+
+    const subject =
+      payload.alertType === 'device_switch'
+        ? 'Security Alert: New Device Login'
+        : 'Security Alert: Suspicious Activity';
+
+    await this.mailService.sendBasicEmail(
+      payload.email,
+      subject,
+      `Hello ${payload.firstName}, ${payload.details}`,
+    );
+
+    this.logger.log(`Security alert email sent successfully to ${payload.email}`);
+  }
+
+  getEventType(): string {
+    return 'user.security_alert';
+  }
+
+  getHandlerName(): string {
+    return 'UserSecurityAlertHandler';
+  }
+}
+
+@Injectable()
+export class UserAccountCreatedHandler
+  implements EventHandler<UserAccountCreatedEvent>
+{
+  private readonly logger = new Logger(UserAccountCreatedHandler.name);
+
+  constructor(private readonly mailService: MailService) {}
+
+  async handle(event: UserAccountCreatedEvent): Promise<void> {
+    const payload = event.getPayload();
+
+    this.logger.log(
+      `Handling UserAccountCreatedEvent for user ${payload.email}`,
+    );
+
+    try {
+      await this.mailService.accountCreationEmail({
+        to: payload.email,
+        name: `${payload.firstName} ${payload.lastName}`,
+        password: payload.password || '******', // Security: Mask if not present
+      });
+
+      this.logger.log(
+        `Account creation email sent successfully to ${payload.email}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send account creation email to ${payload.email}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  getEventType(): string {
+    return 'user.account_created';
+  }
+
+  getHandlerName(): string {
+    return 'UserAccountCreatedHandler';
   }
 }

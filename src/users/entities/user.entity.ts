@@ -1,6 +1,7 @@
 // src/users/schemas/user.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { softDeletePlugin, SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 
 export enum UserRole {
   SITE_ADMIN = 'site_admin',
@@ -19,8 +20,8 @@ export enum AdminPosition {
   OPERATIONS_MANAGER = 'operations_manager',
   PROPERTY_MANAGER = 'property_manager',
   TENANT_RELATIONS = 'tenant_relations',
-  CUSTOM = 'custom',
   SUPER_ADMIN = 'super_admin',
+  CUSTOM = 'custom',
 }
 
 export enum PermissionAction {
@@ -172,7 +173,11 @@ export class LandlordDetails {
 }
 
 @Schema({ timestamps: true })
-export class User extends Document {
+export class User extends Document implements SoftDeleteDocument {
+  isDeleted: boolean;
+  deletedAt?: Date;
+  softDelete: () => Promise<this>;
+  restore: () => Promise<this>;
   // Basic Information
   @Prop({ required: true })
   firstName: string;
@@ -371,9 +376,10 @@ export class User extends Document {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+UserSchema.plugin(softDeletePlugin);
 
 // Add indexes for better performance
-UserSchema.index({ email: 1 });
+// UserSchema.index({ email: 1 }); // Already handled by unique: true on the Prop
 UserSchema.index({ estateId: 1, primaryRole: 1 });
 UserSchema.index({ 'hierarchy.createdBy': 1 });
 UserSchema.index({ 'hierarchy.reportsTo': 1 });

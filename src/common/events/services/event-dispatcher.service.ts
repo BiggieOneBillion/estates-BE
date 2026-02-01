@@ -117,8 +117,30 @@ export class EventDispatcher {
    * Reconstruct a domain event from outbox payload
    */
   private reconstructEvent(outboxEntry: OutboxEvent): BaseDomainEvent {
-    // Create a generic domain event from the stored payload
-    return outboxEntry.payload as any as BaseDomainEvent;
+    // The payload might be the full toJSON() output or just the data payload
+    // If it's the full output (backward compatibility), extract the nested payload
+    const data = outboxEntry.payload.payload || outboxEntry.payload;
+
+    // Return a proxy-like object that satisfies BaseDomainEvent interface
+    // and specifically provides getPayload() which handlers use
+    return {
+      eventId: outboxEntry.eventId,
+      eventType: outboxEntry.eventType,
+      aggregateId: outboxEntry.aggregateId,
+      aggregateType: outboxEntry.aggregateType,
+      occurredAt: outboxEntry.createdAt as any as Date,
+      metadata: outboxEntry.metadata || {},
+      getPayload: () => data,
+      toJSON: () => ({
+        eventId: outboxEntry.eventId,
+        eventType: outboxEntry.eventType,
+        aggregateId: outboxEntry.aggregateId,
+        aggregateType: outboxEntry.aggregateType,
+        occurredAt: outboxEntry.createdAt,
+        metadata: outboxEntry.metadata,
+        payload: data,
+      }),
+    } as any as BaseDomainEvent;
   }
 
   /**
