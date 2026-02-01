@@ -55,7 +55,7 @@ export class InitialSeedService {
       email: 'estateadmin@example.com',
       password: estateAdminPassword,
       phone: '1234567891',
-      roles: [UserRole.ESTATE_ADMIN],
+      roles: [UserRole.ADMIN],
       estate: estate._id,
     });
 

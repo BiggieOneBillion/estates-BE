@@ -1,4 +1,11 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  OnModuleInit,
+  RequestMethod,
+} from '@nestjs/common';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -13,6 +20,11 @@ import { User, UserSchema } from './users/entities/user.entity';
 import { Estate, EstateSchema } from './estates/entities/estate.entity';
 import { MailService } from './common/services/mail.service';
 import { validationSchema } from './config/validation.schema';
+import { LoggerMiddleware } from './common/middleware/logger.middleware';
+import { TokenModule } from './gatePassToken/token.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -21,6 +33,11 @@ import { validationSchema } from './config/validation.schema';
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
       // validationSchema: validationSchema,
     }),
+    EventEmitterModule.forRoot(),
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 10,
+    }]),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -37,6 +54,10 @@ import { validationSchema } from './config/validation.schema';
     UsersModule,
     EstatesModule,
     PropertiesModule,
+    TokenModule,
+    CloudinaryModule,
+    NotificationsModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService, InitialSeedService, MailService],
@@ -46,5 +67,12 @@ export class AppModule implements OnModuleInit {
   constructor(private readonly initialSeedService: InitialSeedService) {}
   async onModuleInit() {
     await this.initialSeedService.seed();
+  }
+
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes({
+      path: '*',
+      method: RequestMethod.ALL,
+    });
   }
 }

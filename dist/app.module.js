@@ -11,6 +11,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
+const event_emitter_1 = require("@nestjs/event-emitter");
+const throttler_1 = require("@nestjs/throttler");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const auth_module_1 = require("./auth/auth.module");
@@ -24,6 +26,11 @@ const initial_seeds_1 = require("./common/seeders/initial-seeds");
 const user_entity_1 = require("./users/entities/user.entity");
 const estate_entity_1 = require("./estates/entities/estate.entity");
 const mail_service_1 = require("./common/services/mail.service");
+const logger_middleware_1 = require("./common/middleware/logger.middleware");
+const token_module_1 = require("./gatePassToken/token.module");
+const cloudinary_module_1 = require("./cloudinary/cloudinary.module");
+const notifications_module_1 = require("./notifications/notifications.module");
+const events_module_1 = require("./events/events.module");
 let AppModule = class AppModule {
     initialSeedService;
     constructor(initialSeedService) {
@@ -31,6 +38,12 @@ let AppModule = class AppModule {
     }
     async onModuleInit() {
         await this.initialSeedService.seed();
+    }
+    configure(consumer) {
+        consumer.apply(logger_middleware_1.LoggerMiddleware).forRoutes({
+            path: '*',
+            method: common_1.RequestMethod.ALL,
+        });
     }
 };
 exports.AppModule = AppModule;
@@ -41,6 +54,11 @@ exports.AppModule = AppModule = __decorate([
                 isGlobal: true,
                 envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
             }),
+            event_emitter_1.EventEmitterModule.forRoot(),
+            throttler_1.ThrottlerModule.forRoot([{
+                    ttl: 60000,
+                    limit: 10,
+                }]),
             mongoose_1.MongooseModule.forRootAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
@@ -57,6 +75,10 @@ exports.AppModule = AppModule = __decorate([
             users_module_1.UsersModule,
             estates_module_1.EstatesModule,
             properties_module_1.PropertiesModule,
+            token_module_1.TokenModule,
+            cloudinary_module_1.CloudinaryModule,
+            notifications_module_1.NotificationsModule,
+            events_module_1.EventsModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService, initial_seeds_1.InitialSeedService, mail_service_1.MailService],

@@ -26,6 +26,7 @@ var SubscriptionStatus;
 })(SubscriptionStatus || (exports.SubscriptionStatus = SubscriptionStatus = {}));
 const now = new Date();
 let Estate = class Estate extends mongoose_2.Document {
+    owner;
     name;
     location;
     subscription;
@@ -36,6 +37,15 @@ let Estate = class Estate extends mongoose_2.Document {
     updatedAt;
 };
 exports.Estate = Estate;
+__decorate([
+    (0, mongoose_1.Prop)({
+        required: true,
+        unique: true,
+        type: mongoose_2.Schema.Types.ObjectId,
+        ref: 'User',
+    }),
+    __metadata("design:type", String)
+], Estate.prototype, "owner", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: true, trim: true }),
     __metadata("design:type", String)

@@ -18,12 +18,15 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const bcrypt = require("bcrypt");
 const user_entity_1 = require("./entities/user.entity");
+const mail_service_1 = require("../common/services/mail.service");
 let UsersService = class UsersService {
     userModel;
-    constructor(userModel) {
+    mailService;
+    constructor(userModel, mailService) {
         this.userModel = userModel;
+        this.mailService = mailService;
     }
-    async create(createUserDto) {
+    async create(createUserDto, creator) {
         const existingUser = await this.userModel.findOne({
             email: createUserDto.email,
         });
@@ -31,14 +34,89 @@ let UsersService = class UsersService {
             throw new common_1.ConflictException('Email already exists');
         }
         const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-        const newUser = new this.userModel({
-            ...createUserDto,
-            password: hashedPassword,
-        });
+        const newUser = createUserDto.primaryRole === user_entity_1.UserRole.ADMIN
+            ? new this.userModel({
+                ...createUserDto,
+                password: hashedPassword,
+                adminDetails: {
+                    ...createUserDto.adminDetails,
+                    positionPermissions: this.getPositionPermissions(createUserDto.adminDetails?.position),
+                    appointedAt: new Date(),
+                    appointedBy: creator,
+                    hierarchy: {
+                        createdBy: creator,
+                        reportsTo: creator,
+                        manages: [],
+                        relationshipEstablishedAt: new Date(),
+                    },
+                    isTemporaryPassword: true,
+                },
+            })
+            : new this.userModel({
+                ...createUserDto,
+                password: hashedPassword,
+            });
+        if (createUserDto.primaryRole !== user_entity_1.UserRole.SUPER_ADMIN &&
+            createUserDto.primaryRole !== user_entity_1.UserRole.SITE_ADMIN) {
+            await this.mailService.accountCreationEmail({
+                to: createUserDto.email,
+                name: createUserDto.firstName,
+                password: createUserDto.password,
+            });
+        }
         return newUser.save();
+    }
+    getPositionPermissions(position) {
+        const positionPermissions = {
+            [user_entity_1.AdminPosition.FACILITY_MANAGER]: [
+                { resource: 'properties', actions: ['manage'] },
+                { resource: 'maintenance', actions: ['manage'] },
+            ],
+            [user_entity_1.AdminPosition.SECURITY_HEAD]: [
+                { resource: 'security', actions: ['manage'] },
+                { resource: 'users', actions: ['read', 'update'] },
+            ],
+            [user_entity_1.AdminPosition.FINANCE_MANAGER]: [
+                { resource: 'finances', actions: ['manage'] },
+                { resource: 'reports', actions: ['manage'] },
+            ],
+            [user_entity_1.AdminPosition.TENANT_RELATIONS]: [
+                {
+                    resource: 'tenants',
+                    actions: ['read', 'update'],
+                },
+                {
+                    resource: 'maintenance',
+                    actions: ['read', 'assign'],
+                },
+            ],
+            [user_entity_1.AdminPosition.MAINTENANCE_SUPERVISOR]: [
+                { resource: 'properties', actions: ['manage'] },
+                { resource: 'maintenance', actions: ['manage'] },
+            ],
+            [user_entity_1.AdminPosition.OPERATIONS_MANAGER]: [
+                { resource: 'operations', actions: ['manage'] },
+                { resource: 'maintenance', actions: ['manage'] },
+            ],
+            [user_entity_1.AdminPosition.PROPERTY_MANAGER]: [
+                { resource: 'properties', actions: ['manage'] },
+                { resource: 'maintenance', actions: ['manage'] },
+            ],
+            [user_entity_1.AdminPosition.CUSTOM]: [],
+        };
+        return positionPermissions[position] || [];
     }
     async findAll() {
         return this.userModel.find().exec();
+    }
+    async findByRole(role) {
+        return this.userModel.find({ primaryRole: role }).exec();
+    }
+    async findByAdminPosition(position) {
+        return this.userModel.find({ 'adminDetails.position': position }).exec();
+    }
+    async findByEstate(estateId) {
+        return this.userModel.find({ estateId });
     }
     async findOne(id) {
         const user = await this.userModel.findById(id).exec();
@@ -49,6 +127,11 @@ let UsersService = class UsersService {
     }
     async findByEmail(email) {
         return this.userModel.findOne({ email }).exec();
+    }
+    async findSecurity(estateId) {
+        return this.userModel
+            .findOne({ primaryRole: user_entity_1.UserRole.SECURITY, estateId })
+            .exec();
     }
     async update(id, updateUserDto) {
         const user = await this.userModel.findById(id);
@@ -72,11 +155,26 @@ let UsersService = class UsersService {
             throw new common_1.NotFoundException(`User with ID ${id} not found`);
         }
     }
+    async disableTokenGeneration(userId) {
+        const updatedUser = await this.userModel.findByIdAndUpdate(userId, { canCreateToken: false }, { new: true });
+        return {
+            message: `Token generation disabled for ${updatedUser?.firstName} ${updatedUser?.lastName}`,
+            user: updatedUser,
+        };
+    }
+    async enableTokenGeneration(userId) {
+        const updatedUser = await this.userModel.findByIdAndUpdate(userId, { canCreateToken: true }, { new: true });
+        return {
+            message: `Token generation enabled for ${updatedUser?.firstName} ${updatedUser?.lastName}`,
+            user: updatedUser,
+        };
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(user_entity_1.User.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model])
+    __metadata("design:paramtypes", [mongoose_2.Model,
+        mail_service_1.MailService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map
