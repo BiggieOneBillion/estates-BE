@@ -31,6 +31,7 @@ var AdminPosition;
     AdminPosition["PROPERTY_MANAGER"] = "property_manager";
     AdminPosition["TENANT_RELATIONS"] = "tenant_relations";
     AdminPosition["CUSTOM"] = "custom";
+    AdminPosition["SUPER_ADMIN"] = "super_admin";
 })(AdminPosition || (exports.AdminPosition = AdminPosition = {}));
 var PermissionAction;
 (function (PermissionAction) {
@@ -280,6 +281,9 @@ let User = class User extends mongoose_2.Document {
     passwordResetExpires;
     twoFactorSecret;
     isTwoFactorEnabled;
+    fcmTokens;
+    notificationPreferences;
+    tokenVersion;
     notes;
     metadata;
 };
@@ -461,6 +465,25 @@ __decorate([
     __metadata("design:type", Boolean)
 ], User.prototype, "isTwoFactorEnabled", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ type: [String], default: [] }),
+    __metadata("design:type", Array)
+], User.prototype, "fcmTokens", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: {
+            email: { type: Boolean, default: true },
+            push: { type: Boolean, default: true },
+            sms: { type: Boolean, default: false },
+        },
+        default: { email: true, push: true, sms: false },
+    }),
+    __metadata("design:type", Object)
+], User.prototype, "notificationPreferences", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "tokenVersion", void 0);
+__decorate([
     (0, mongoose_1.Prop)(),
     __metadata("design:type", String)
 ], User.prototype, "notes", void 0);
@@ -506,7 +529,7 @@ exports.UserSchema.pre('save', function (next) {
         }
         if (!this.adminDetails) {
             this.adminDetails = {
-                position: AdminPosition.OPERATIONS_MANAGER,
+                position: AdminPosition.SUPER_ADMIN,
                 customPositionTitle: 'Estate Super Administrator',
                 department: 'Estate Management',
                 positionPermissions: [],

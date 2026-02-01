@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -25,6 +26,9 @@ import { TokenModule } from './gatePassToken/token.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventsModule } from './events/events.module';
+import { LeviesModule } from './levies/levies.module';
+import { PaymentsModule } from './payments/payments.module';
+import { ComplianceModule } from './compliance/compliance.module';
 
 @Module({
   imports: [
@@ -34,6 +38,7 @@ import { EventsModule } from './events/events.module';
       // validationSchema: validationSchema,
     }),
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 10,
@@ -58,6 +63,9 @@ import { EventsModule } from './events/events.module';
     CloudinaryModule,
     NotificationsModule,
     EventsModule,
+    LeviesModule,
+    PaymentsModule,
+    ComplianceModule,
   ],
   controllers: [AppController],
   providers: [AppService, InitialSeedService, MailService],

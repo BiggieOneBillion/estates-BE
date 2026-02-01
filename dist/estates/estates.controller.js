@@ -23,6 +23,7 @@ const roles_guard_1 = require("../auth/guards/roles.guard");
 const user_entity_1 = require("../users/entities/user.entity");
 const role_decorator_1 = require("../auth/decorators/role.decorator");
 const users_service_1 = require("../users/users.service");
+const verified_guard_1 = require("../auth/guards/verified.guard");
 let EstatesController = class EstatesController {
     estatesService;
     usersService;
@@ -151,7 +152,7 @@ exports.EstatesController = EstatesController = __decorate([
     (0, swagger_1.ApiTags)('Estates'),
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('estates'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard),
     __metadata("design:paramtypes", [estates_service_1.EstatesService,
         users_service_1.UsersService])
 ], EstatesController);

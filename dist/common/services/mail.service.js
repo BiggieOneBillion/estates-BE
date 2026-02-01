@@ -115,6 +115,75 @@ let MailService = class MailService {
         }
         return info;
     }
+    async sendPaymentReminder(data) {
+        const subject = data.isOverdue
+            ? `Payment Overdue: ${data.levyTitle}`
+            : `Payment Reminder: ${data.levyTitle}`;
+        const dueDateFormatted = data.dueDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+        const urgencyColor = data.isOverdue ? '#dc2626' : '#f59e0b';
+        const urgencyText = data.isOverdue ? 'OVERDUE' : 'REMINDER';
+        const mailOptions = {
+            from: '"Estate Management" <noreply@estatemanagement.com>',
+            to: data.to,
+            subject,
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: ${urgencyColor}; color: white; padding: 10px; text-align: center; border-radius: 5px 5px 0 0;">
+            <h2 style="margin: 0;">${urgencyText}</h2>
+          </div>
+          <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 5px 5px;">
+            <h3>Hello ${data.userName},</h3>
+            ${data.isOverdue
+                ? `<p style="color: #dc2626; font-weight: bold;">Your payment is overdue. Please make payment as soon as possible to avoid restrictions.</p>`
+                : `<p>This is a friendly reminder about your upcoming payment.</p>`}
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p style="margin: 5px 0;"><strong>Levy:</strong> ${data.levyTitle}</p>
+              <p style="margin: 5px 0;"><strong>Amount:</strong> ₦${data.amount.toLocaleString()}</p>
+              <p style="margin: 5px 0;"><strong>Due Date:</strong> ${dueDateFormatted}</p>
+              ${!data.isOverdue
+                ? `<p style="margin: 5px 0;"><strong>Time Remaining:</strong> ${data.timeframe === 'today' ? 'Due Today' : data.timeframe}</p>`
+                : ''}
+            </div>
+            ${data.isOverdue
+                ? `<p style="color: #dc2626;">Please make your payment immediately to avoid any service restrictions or penalties.</p>`
+                : `<p>Please ensure you make your payment on or before the due date.</p>`}
+            <p>If you have already made this payment, please disregard this reminder.</p>
+            <p style="margin-top: 30px;">Best regards,<br>Estate Management Team</p>
+          </div>
+        </div>
+      `,
+        };
+        const info = await this.transporter.sendMail(mailOptions);
+        if (this.configService.get('NODE_ENV') !== 'production') {
+            console.log('Payment reminder email preview URL:', nodemailer.getTestMessageUrl(info));
+        }
+        return info;
+    }
+    async sendBasicEmail(to, subject, message) {
+        const mailOptions = {
+            from: '"Estate Management" <noreply@estatemanagement.com>',
+            to,
+            subject,
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 5px;">
+            <h3>Security Notification</h3>
+            <p>${message}</p>
+            <p style="margin-top: 30px;">Best regards,<br>Estate Management Team</p>
+          </div>
+        </div>
+      `,
+        };
+        const info = await this.transporter.sendMail(mailOptions);
+        if (this.configService.get('NODE_ENV') !== 'production') {
+            console.log('Basic email preview URL:', nodemailer.getTestMessageUrl(info));
+        }
+        return info;
+    }
 };
 exports.MailService = MailService;
 exports.MailService = MailService = __decorate([

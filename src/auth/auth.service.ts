@@ -15,6 +15,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User, UserRole } from 'src/users/entities/user.entity';
 import { Model } from 'mongoose';
 import { MailService } from 'src/common/services/mail.service';
+import { UserResponseDto, VerifyLoginResponseDto } from './dto/verify-login-response.dto';
+import { plainToInstance } from "class-transformer"
 
 @Injectable()
 export class AuthService {
@@ -46,8 +48,8 @@ export class AuthService {
 
     if (!isMobile && user.primaryRole !== UserRole.SUPER_ADMIN) { // checks if the device is mobile if not so, then only super admin can log in.
       return {
-        message: 'You must be an estate owner',
-        status: 404,
+        message: 'Login through your mobile device',
+        status: 400,
       };
     }
 
@@ -56,8 +58,19 @@ export class AuthService {
         sub: user._id as string,
         email: user.email,
         roles: user.primaryRole as UserRole,
+        type: 'pre-auth',
+        isVerified: false,
+        reason: 'unverified_email',
+        version: user.tokenVersion,
         // estate: user.estate,
       };
+
+      // here we resend the email to the user and tell them to verify their email
+      await this.mailService.sendVerificationEmail(
+        user.email,
+        user.verificationToken!,
+        `${user.firstName} ${user.lastName}`,
+      );
       // Return custom response instead of throwing exception
       return {
         status: 222,
@@ -72,6 +85,41 @@ export class AuthService {
     const verificationToken = Math.floor(
       100000 + Math.random() * 900000,
     ).toString();
+
+    if(user.isActive){ // IF USER IS ACTIVE ( THAT IS LOGGED IN ON ANOTHER DEVICE) AND WANT TO LOG IN ON THIS DEVICE
+        const payload: JwtPayload = {
+        sub: user._id as string,
+        email: user.email,
+        roles: user.primaryRole as UserRole,
+        type: 'pre-auth',
+        isVerified: false,
+        reason: 'active_on_another_device',
+        version: user.tokenVersion,
+        // estate: user.estate,
+      };
+
+      // here we resend the email to the user and tell them to verify their email
+      await this.mailService.sendVerificationEmail(
+        user.email,
+        verificationToken,
+        `${user.firstName} ${user.lastName}`,
+      );
+
+      user.verificationToken = verificationToken;
+      await user.save();
+      // Return custom response instead of throwing exception
+      return {
+        status: 222,
+        message: 'User logged in on another device',
+        active: true,
+        email: user.email,
+        access_token: this.jwtService.sign(payload),
+      };
+    }
+
+    
+
+ 
     user.verificationToken = verificationToken;
     await user.save();
 
@@ -121,11 +169,15 @@ export class AuthService {
 
     const isVerificationCodeValid = code === user.verificationToken;
 
-    // console.log('Verification code valid:', isVerificationCodeValid); // Add this line to log the verification code validity
+    console.log('Verification code valid:', isVerificationCodeValid); // Add this line to log the verification code validity
 
     if (!isVerificationCodeValid) {
       throw new BadRequestException('Invalid credentials');
     }
+
+
+    // Update user isActive to true
+    user.isActive = true;
 
     // Update last login timestamp and verificationToken
     user.lastLogin = new Date();
@@ -137,11 +189,20 @@ export class AuthService {
       sub: user._id as string,
       email: user.email,
       roles: user.primaryRole as UserRole,
+      type: 'auth',
+      isVerified: true,
+      version: user.tokenVersion,
       // estate: user.estate,
     };
 
+    const userInstance = plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
+
+    // console.log('User instance:', userInstance);
+
     return {
-      user,
+      user: userInstance,
       access_token: this.jwtService.sign(payload),
     };
   }
@@ -204,9 +265,12 @@ export class AuthService {
     const user = await this.validateUserRegistering(registerDto);
     console.log('USER', user);
     const payload: JwtPayload = {
-      sub: user.id.toString(),
+      sub: user._id.toString(),
       email: user.email,
-      roles: user.roles,
+      roles: user.primaryRole,
+      type: 'auth',
+      isVerified: false, // Registration still needs email verification
+      version: 0, // Initial version
       estate: user.estate,
     };
 
@@ -247,6 +311,65 @@ export class AuthService {
     return {
       message: 'Email Verification Successful',
       status: 200,
+    };
+  }
+
+  async verifyPreAuth(info: { email: string; code: string }, payload: any) {
+    const { email, code } = info;
+    const user = await this.usersService.findByEmail(email);
+
+    console.log('USER', user!._id);
+
+    console.log('PAYLOAD', payload);
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    if ((user._id as any).toString() !== payload.userId) {
+      throw new UnauthorizedException('Identity mismatch');
+    }
+
+    if (code !== user.verificationToken) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    if (payload.reason === 'unverified_email') {
+      user.isEmailVerified = true;
+    } else if (payload.reason === 'active_on_another_device') {
+      // Increment version to invalidate all current tokens
+      user.tokenVersion += 1;
+      
+      // Notify user of device change
+      await this.mailService.sendBasicEmail(
+        user.email,
+        'Security Alert: New Device Login',
+        `Hello ${user.firstName}, you have successfully switched your active session to a new device. Previous sessions have been logged out for your security.`,
+      );
+    }
+
+    user.isActive = true;
+    user.lastLogin = new Date();
+    user.verificationToken = null;
+    await user.save();
+
+    const newPayload: JwtPayload = {
+      sub: user._id as string,
+      email: user.email,
+      roles: user.primaryRole as UserRole,
+      type: 'auth',
+      isVerified: true,
+      version: user.tokenVersion,
+      // estate: user.estate,
+    };
+
+    const userInstance = plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
+
+    return {
+      user: userInstance,
+      access_token: this.jwtService.sign(newPayload),
     };
   }
 

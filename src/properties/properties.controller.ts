@@ -21,11 +21,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from 'src/users/entities/user.entity';
 import { Roles } from 'src/auth/decorators/role.decorator';
+import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 
 @ApiTags('Properties')
 @ApiBearerAuth()
 @Controller('properties')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, VerifiedGuard)
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 

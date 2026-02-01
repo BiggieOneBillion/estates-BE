@@ -13,13 +13,22 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { VerifiedGuard } from './guards/verified.guard';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiBody,
 } from '@nestjs/swagger';
 import { RegisterDto } from './dto/register.dto';
+import { VerifyLoginDto } from './dto/verify-login.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyLoginResponseDto } from './dto/verify-login-response.dto';
+import { VerifyPreAuthDto } from './dto/verify-preauth.dto';
 import { Response } from 'express';
 import { request } from 'http';
 
@@ -53,15 +62,13 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Login email verification successful',
+    description: 'Login email verification successful and returns user tokens.',
+    type: VerifyLoginResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
   @Post('login/verify')
-  async VerifyLoginEmail(@Body() body: { email: string; code: string }) {
-    return this.authService.validateUserEmailLogin({
-      email: body.email,
-      code: body.code,
-    });
+  async VerifyLoginEmail(@Body() verifyLoginDto: VerifyLoginDto) {
+    return this.authService.validateUserEmailLogin(verifyLoginDto);
   }
 
   @ApiOperation({
@@ -72,7 +79,24 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad request or user already exists' })
   @Post('register')
   async Register(@Body() registerDto: RegisterDto) {
+    console.log(registerDto);
     return this.authService.register(registerDto);
+  }
+
+  @ApiOperation({
+    summary: 'Verify pre-auth session (email verification or multi-device)',
+    description: 'Resolves pre-auth status using a 6-digit code. Handles email verification and device switching.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pre-auth resolved successfully, returns full auth token.',
+    type: VerifyLoginResponseDto,
+  })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('verify-preauth')
+  async verifyPreAuth(@Body() verifyPreAuthDto: VerifyPreAuthDto, @Request() req) {
+    return this.authService.verifyPreAuth(verifyPreAuthDto, req.user);
   }
 
   @ApiOperation({
@@ -85,9 +109,9 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('verify-email')
   async VerifyRegistrationEmail(
-    @Body() body: { data: { email: string; code: string } },
+    @Body() verifyEmailDto: VerifyEmailDto,
   ) {
-    return this.authService.verifyEmail(body.data);
+    return this.authService.verifyEmail(verifyEmailDto.data);
   }
 
   @ApiOperation({
@@ -97,7 +121,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, VerifiedGuard)
   @Get('profile')
   getProfile(@Request() req) {
     return req.user;
@@ -107,11 +131,11 @@ export class AuthController {
     summary: 'Request password reset',
     description: 'Sends a password reset code to the provided email address.',
   })
-  @ApiResponse({ status: 200, description: 'Password reset OTP sent' })
+  @ApiResponse({ status: 200, description: 'Password reset OTP sent successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @Post('forgot-password')
-  async requestPasswordReset(@Body() body: { email: string }) {
-    return this.authService.sendPasswordResetOTP(body.email);
+  async requestPasswordReset(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.sendPasswordResetOTP(forgotPasswordDto.email);
   }
 
   @ApiOperation({
@@ -122,12 +146,12 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired OTP' })
   @Post('verify-reset-otp')
   async verifyPasswordResetOTP(
-    @Body() body: { email: string; code: string },
+    @Body() verifyResetOtpDto: VerifyResetOtpDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const { token } = await this.authService.verifyPasswordResetOTP(
-      body.email,
-      body.code,
+      verifyResetOtpDto.email,
+      verifyResetOtpDto.code,
     );
 
     res.cookie('reset_token', token, {
@@ -150,7 +174,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Reset token is missing or expired' })
   @Post('reset-password')
   async resetPassword(
-    @Body() body: { newPassword: string },
+    @Body() resetPasswordDto: ResetPasswordDto,
     @Request() req,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -160,10 +184,10 @@ export class AuthController {
       throw new UnauthorizedException('Reset token is missing or expired');
     }
 
-    await this.authService.resetPassword(resetToken, body.newPassword);
+    await this.authService.resetPassword(resetToken, resetPasswordDto.newPassword);
     res.clearCookie('reset_token');
 
-    return { message: 'Password has been reset successfully' };
+    return { message: 'Password has been reset successfully'};
   }
 }
 

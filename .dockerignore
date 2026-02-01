@@ -1,0 +1,15 @@
+node_modules
+dist
+npm-debug.log
+.git
+.env*
+! .env.production
+Dockerfile
+docker-compose.yml
+.prettierrc
+eslint.config.mjs
+README.md
+docs
+logs
+test
+test_validation.js

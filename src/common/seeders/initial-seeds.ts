@@ -25,26 +25,29 @@ export class InitialSeedService {
 
     this.logger.log('Seeding database...');
 
-    // Create default estate
-    const estate = await this.estateModel.create({
-      name: 'Sample Estate',
-      address: '123 Sample Street',
-      city: 'Sample City',
-      state: 'Sample State',
-      country: 'Sample Country',
-      zipCode: '12345',
-      description: 'A sample estate for demonstration purposes',
-    });
-
-    // Create super admin user
+    // Create super admin user first to be the estate owner
     const hashedPassword = await bcrypt.hash('admin123', 10);
-    await this.userModel.create({
+    const superAdmin = await this.userModel.create({
       firstName: 'Admin',
       lastName: 'User',
       email: 'admin@example.com',
       password: hashedPassword,
       phone: '1234567890',
-      roles: [UserRole.SUPER_ADMIN],
+      primaryRole: UserRole.SUPER_ADMIN,
+    });
+
+    // Create default estate
+    const estate = await this.estateModel.create({
+      owner: superAdmin._id,
+      name: 'Sample Estate',
+      location: {
+        address: '123 Sample Street',
+        city: 'Sample City',
+        state: 'Sample State',
+        country: 'Sample Country',
+      },
+      zipCode: '12345',
+      description: 'A sample estate for demonstration purposes',
     });
 
     // Create estate admin user
@@ -55,7 +58,7 @@ export class InitialSeedService {
       email: 'estateadmin@example.com',
       password: estateAdminPassword,
       phone: '1234567891',
-      roles: [UserRole.ADMIN],
+      primaryRole: UserRole.ADMIN,
       estate: estate._id,
     });
 
@@ -67,7 +70,7 @@ export class InitialSeedService {
       email: 'landlord@example.com',
       password: landlordPassword,
       phone: '1234567892',
-      roles: [UserRole.LANDLORD],
+      primaryRole: UserRole.LANDLORD,
       estate: estate._id,
     });
 
@@ -79,7 +82,7 @@ export class InitialSeedService {
       email: 'tenant@example.com',
       password: tenantPassword,
       phone: '1234567893',
-      roles: [UserRole.TENANT],
+      primaryRole: UserRole.TENANT,
       estate: estate._id,
     });
 
@@ -91,7 +94,7 @@ export class InitialSeedService {
       email: 'security@example.com',
       password: securityPassword,
       phone: '1234567894',
-      roles: [UserRole.SECURITY],
+      primaryRole: UserRole.SECURITY,
       estate: estate._id,
     });
 

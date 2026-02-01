@@ -4,6 +4,10 @@ export interface JwtPayload {
     email: string;
     roles: UserRole;
     estate?: string;
+    type: 'auth' | 'pre-auth' | 'password_reset';
+    isVerified: boolean;
+    reason?: 'unverified_email' | 'active_on_another_device';
+    version: number;
     iat?: number;
     exp?: number;
 }

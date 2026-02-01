@@ -11,6 +11,7 @@ import { UsersModule } from '../users/users.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EventsModule } from 'src/events/events.module';
+import { ComplianceModule } from '../compliance/compliance.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { EventsModule } from 'src/events/events.module';
     CloudinaryModule,
     NotificationsModule,
     EventsModule,
+    ComplianceModule,
   ],
   controllers: [TokenController],
   providers: [TokenService, UsersService, MailService],

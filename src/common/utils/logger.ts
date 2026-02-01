@@ -6,8 +6,8 @@ export const logger = createLogger({
   format: format.combine(
     format.timestamp(),
     format.errors({ stack: true }),
-    format.printf(({ timestamp, level, message }) => {
-      return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+    format.printf(({ timestamp, level, message, stack }) => {
+      return `[${timestamp}] ${level.toUpperCase()}: ${message}${stack ? `\nSTACK: ${stack}` : ''}`;
     }),
   ),
   transports: [

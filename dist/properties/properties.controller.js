@@ -22,6 +22,7 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const user_entity_1 = require("../users/entities/user.entity");
 const role_decorator_1 = require("../auth/decorators/role.decorator");
+const verified_guard_1 = require("../auth/guards/verified.guard");
 let PropertiesController = class PropertiesController {
     propertiesService;
     constructor(propertiesService) {
@@ -130,7 +131,7 @@ exports.PropertiesController = PropertiesController = __decorate([
     (0, swagger_1.ApiTags)('Properties'),
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('properties'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard),
     __metadata("design:paramtypes", [properties_service_1.PropertiesService])
 ], PropertiesController);
 //# sourceMappingURL=properties.controller.js.map

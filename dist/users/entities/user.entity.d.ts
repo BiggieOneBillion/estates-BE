@@ -15,7 +15,8 @@ export declare enum AdminPosition {
     OPERATIONS_MANAGER = "operations_manager",
     PROPERTY_MANAGER = "property_manager",
     TENANT_RELATIONS = "tenant_relations",
-    CUSTOM = "custom"
+    CUSTOM = "custom",
+    SUPER_ADMIN = "super_admin"
 }
 export declare enum PermissionAction {
     CREATE = "create",
@@ -121,6 +122,13 @@ export declare class User extends Document {
     passwordResetExpires?: Date;
     twoFactorSecret?: string;
     isTwoFactorEnabled: boolean;
+    fcmTokens?: string[];
+    notificationPreferences?: {
+        email: boolean;
+        push: boolean;
+        sms: boolean;
+    };
+    tokenVersion: number;
     notes?: string;
     metadata?: Record<string, any>;
 }

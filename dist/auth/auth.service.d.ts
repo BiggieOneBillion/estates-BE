@@ -5,6 +5,7 @@ import { RegisterDto } from './dto/register.dto';
 import { User } from 'src/users/entities/user.entity';
 import { Model } from 'mongoose';
 import { MailService } from 'src/common/services/mail.service';
+import { UserResponseDto } from './dto/verify-login-response.dto';
 export declare class AuthService {
     private usersService;
     private jwtService;
@@ -18,7 +19,7 @@ export declare class AuthService {
         email: string;
         code: string;
     }): Promise<{
-        user: User;
+        user: UserResponseDto;
         access_token: string;
     }>;
     validateUserRegistering(registerDto: RegisterDto): Promise<any>;
@@ -31,6 +32,13 @@ export declare class AuthService {
     }): Promise<{
         message: string;
         status: number;
+    }>;
+    verifyPreAuth(info: {
+        email: string;
+        code: string;
+    }, payload: any): Promise<{
+        user: UserResponseDto;
+        access_token: string;
     }>;
     sendPasswordResetOTP(email: string): Promise<{
         message: string;
