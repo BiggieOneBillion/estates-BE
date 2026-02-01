@@ -42,6 +42,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       estate: payload.estate,
       type: payload.type,
       isVerified: payload.isVerified,
+      grantedPermissions: user.grantedPermissions || [],
     };
   }
 }
