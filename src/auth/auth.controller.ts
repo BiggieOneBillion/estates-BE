@@ -10,7 +10,16 @@ import {
   UnauthorizedException,
   Req,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { LoginCommand } from './cqrs/commands/impl/login.command';
+import { RegisterCommand } from './cqrs/commands/impl/register.command';
+import { VerifyPreAuthCommand } from './cqrs/commands/impl/verify-preauth.command';
+import { VerifyEmailCommand } from './cqrs/commands/impl/verify-email.command';
+import { ForgotPasswordCommand } from './cqrs/commands/impl/forgot-password.command';
+import { VerifyResetOtpCommand } from './cqrs/commands/impl/verify-reset-otp.command';
+import { ResetPasswordCommand } from './cqrs/commands/impl/reset-password.command';
+import { LogoutCommand } from './cqrs/commands/impl/logout.command';
+import { VerifyLoginCommand } from './cqrs/commands/impl/verify-login.command';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { VerifiedGuard } from './guards/verified.guard';
 import {
@@ -41,7 +50,10 @@ import { Response } from 'express';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private commandBus: CommandBus,
+    private queryBus: QueryBus,
+  ) {}
 
   @ApiOperation({
     summary: 'User login',
@@ -53,7 +65,7 @@ export class AuthController {
   async login(@Body() loginDto: LoginRequestDto, @Request() req) {
     const userAgent = req.headers['user-agent'];
     const isMobile = /mobile/i.test(userAgent);
-    return this.authService.login(loginDto, isMobile);
+    return this.commandBus.execute(new LoginCommand(loginDto, isMobile));
   }
 
   @ApiOperation({
@@ -68,7 +80,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
   @Post('login/verify')
   async VerifyLoginEmail(@Body() verifyLoginDto: VerifyLoginRequestDto) {
-    return this.authService.validateUserEmailLogin(verifyLoginDto);
+    return this.commandBus.execute(new VerifyLoginCommand(verifyLoginDto));
   }
 
   @ApiOperation({
@@ -79,8 +91,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad request or user already exists' })
   @Post('register')
   async Register(@Body() registerDto: RegisterRequestDto) {
-    console.log(registerDto);
-    return this.authService.register(registerDto);
+    return this.commandBus.execute(new RegisterCommand(registerDto));
   }
 
   @ApiOperation({
@@ -96,7 +107,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('verify-preauth')
   async verifyPreAuth(@Body() verifyPreAuthDto: VerifyPreAuthRequestDto, @Request() req) {
-    return this.authService.verifyPreAuth(verifyPreAuthDto, req.user);
+    return this.commandBus.execute(new VerifyPreAuthCommand(verifyPreAuthDto, req.user));
   }
 
   @ApiOperation({
@@ -111,7 +122,7 @@ export class AuthController {
   async VerifyRegistrationEmail(
     @Body() verifyEmailDto: VerifyEmailRequestDto,
   ) {
-    return this.authService.verifyEmail(verifyEmailDto.data);
+    return this.commandBus.execute(new VerifyEmailCommand(verifyEmailDto.data.email, verifyEmailDto.data.code));
   }
 
   @ApiOperation({
@@ -135,7 +146,7 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'User not found' })
   @Post('forgot-password')
   async requestPasswordReset(@Body() forgotPasswordDto: ForgotPasswordRequestDto) {
-    return this.authService.sendPasswordResetOTP(forgotPasswordDto.email);
+    return this.commandBus.execute(new ForgotPasswordCommand(forgotPasswordDto.email));
   }
 
   @ApiOperation({
@@ -149,10 +160,10 @@ export class AuthController {
     @Body() verifyResetOtpDto: VerifyResetOtpRequestDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { token } = await this.authService.verifyPasswordResetOTP(
+    const { token } = await this.commandBus.execute(new VerifyResetOtpCommand(
       verifyResetOtpDto.email,
       verifyResetOtpDto.code,
-    );
+    ));
 
     res.cookie('reset_token', token, {
       httpOnly: true,
@@ -184,7 +195,7 @@ export class AuthController {
       throw new UnauthorizedException('Reset token is missing or expired');
     }
 
-    await this.authService.resetPassword(resetToken, resetPasswordDto.newPassword);
+    await this.commandBus.execute(new ResetPasswordCommand(resetToken, resetPasswordDto.newPassword));
     res.clearCookie('reset_token');
 
     return { message: 'Password has been reset successfully'};
@@ -200,7 +211,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   async logout(@Request() req) {
-    return this.authService.logout(req.user.userId);
+    return this.commandBus.execute(new LogoutCommand(req.user.userId));
   }
 }
 

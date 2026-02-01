@@ -3,7 +3,7 @@ import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthService } from './auth.service';
+
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -12,8 +12,32 @@ import { User, UserSchema } from 'src/users/entities/user.entity';
 import { MailService } from 'src/common/services/mail.service'; 
 import { EventsInfrastructureModule } from 'src/common/events/events-infrastructure.module';
 
+import { CqrsModule } from '@nestjs/cqrs';
+import { LoginHandler } from './cqrs/commands/handlers/login.handler';
+import { RegisterHandler } from './cqrs/commands/handlers/register.handler';
+import { VerifyPreAuthHandler } from './cqrs/commands/handlers/verify-preauth.handler';
+import { VerifyEmailHandler } from './cqrs/commands/handlers/verify-email.handler';
+import { ForgotPasswordHandler } from './cqrs/commands/handlers/forgot-password.handler';
+import { VerifyResetOtpHandler } from './cqrs/commands/handlers/verify-reset-otp.handler';
+import { ResetPasswordHandler } from './cqrs/commands/handlers/reset-password.handler';
+import { LogoutHandler } from './cqrs/commands/handlers/logout.handler';
+import { VerifyLoginHandler } from './cqrs/commands/handlers/verify-login.handler';
+
+export const CommandHandlers = [
+  LoginHandler,
+  RegisterHandler,
+  VerifyPreAuthHandler,
+  VerifyEmailHandler,
+  ForgotPasswordHandler,
+  VerifyResetOtpHandler,
+  ResetPasswordHandler,
+  LogoutHandler,
+  VerifyLoginHandler,
+];
+
 @Module({
   imports: [
+    CqrsModule,
     UsersModule,
     PassportModule,
     JwtModule.registerAsync({
@@ -28,7 +52,7 @@ import { EventsInfrastructureModule } from 'src/common/events/events-infrastruct
     EventsInfrastructureModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, MailService],
-  exports: [AuthService, JwtModule],
+  providers: [JwtStrategy, MailService, ...CommandHandlers],
+  exports: [JwtModule],
 })
 export class AuthModule {}

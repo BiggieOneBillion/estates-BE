@@ -14,7 +14,16 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
-const auth_service_1 = require("./auth.service");
+const cqrs_1 = require("@nestjs/cqrs");
+const login_command_1 = require("./cqrs/commands/impl/login.command");
+const register_command_1 = require("./cqrs/commands/impl/register.command");
+const verify_preauth_command_1 = require("./cqrs/commands/impl/verify-preauth.command");
+const verify_email_command_1 = require("./cqrs/commands/impl/verify-email.command");
+const forgot_password_command_1 = require("./cqrs/commands/impl/forgot-password.command");
+const verify_reset_otp_command_1 = require("./cqrs/commands/impl/verify-reset-otp.command");
+const reset_password_command_1 = require("./cqrs/commands/impl/reset-password.command");
+const logout_command_1 = require("./cqrs/commands/impl/logout.command");
+const verify_login_command_1 = require("./cqrs/commands/impl/verify-login.command");
 const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
 const verified_guard_1 = require("./guards/verified.guard");
 const swagger_1 = require("@nestjs/swagger");
@@ -28,36 +37,37 @@ const reset_password_request_dto_1 = require("./dto/request/reset-password.reque
 const verify_login_response_dto_1 = require("./dto/response/verify-login.response.dto");
 const verify_preauth_request_dto_1 = require("./dto/request/verify-preauth.request.dto");
 let AuthController = class AuthController {
-    authService;
-    constructor(authService) {
-        this.authService = authService;
+    commandBus;
+    queryBus;
+    constructor(commandBus, queryBus) {
+        this.commandBus = commandBus;
+        this.queryBus = queryBus;
     }
     async login(loginDto, req) {
         const userAgent = req.headers['user-agent'];
         const isMobile = /mobile/i.test(userAgent);
-        return this.authService.login(loginDto, isMobile);
+        return this.commandBus.execute(new login_command_1.LoginCommand(loginDto, isMobile));
     }
     async VerifyLoginEmail(verifyLoginDto) {
-        return this.authService.validateUserEmailLogin(verifyLoginDto);
+        return this.commandBus.execute(new verify_login_command_1.VerifyLoginCommand(verifyLoginDto));
     }
     async Register(registerDto) {
-        console.log(registerDto);
-        return this.authService.register(registerDto);
+        return this.commandBus.execute(new register_command_1.RegisterCommand(registerDto));
     }
     async verifyPreAuth(verifyPreAuthDto, req) {
-        return this.authService.verifyPreAuth(verifyPreAuthDto, req.user);
+        return this.commandBus.execute(new verify_preauth_command_1.VerifyPreAuthCommand(verifyPreAuthDto, req.user));
     }
     async VerifyRegistrationEmail(verifyEmailDto) {
-        return this.authService.verifyEmail(verifyEmailDto.data);
+        return this.commandBus.execute(new verify_email_command_1.VerifyEmailCommand(verifyEmailDto.data.email, verifyEmailDto.data.code));
     }
     getProfile(req) {
         return req.user;
     }
     async requestPasswordReset(forgotPasswordDto) {
-        return this.authService.sendPasswordResetOTP(forgotPasswordDto.email);
+        return this.commandBus.execute(new forgot_password_command_1.ForgotPasswordCommand(forgotPasswordDto.email));
     }
     async verifyPasswordResetOTP(verifyResetOtpDto, res) {
-        const { token } = await this.authService.verifyPasswordResetOTP(verifyResetOtpDto.email, verifyResetOtpDto.code);
+        const { token } = await this.commandBus.execute(new verify_reset_otp_command_1.VerifyResetOtpCommand(verifyResetOtpDto.email, verifyResetOtpDto.code));
         res.cookie('reset_token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -73,12 +83,12 @@ let AuthController = class AuthController {
         if (!resetToken) {
             throw new common_1.UnauthorizedException('Reset token is missing or expired');
         }
-        await this.authService.resetPassword(resetToken, resetPasswordDto.newPassword);
+        await this.commandBus.execute(new reset_password_command_1.ResetPasswordCommand(resetToken, resetPasswordDto.newPassword));
         res.clearCookie('reset_token');
         return { message: 'Password has been reset successfully' };
     }
     async logout(req) {
-        return this.authService.logout(req.user.userId);
+        return this.commandBus.execute(new logout_command_1.LogoutCommand(req.user.userId));
     }
 };
 exports.AuthController = AuthController;
@@ -235,6 +245,7 @@ __decorate([
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.Controller)('auth'),
-    __metadata("design:paramtypes", [auth_service_1.AuthService])
+    __metadata("design:paramtypes", [cqrs_1.CommandBus,
+        cqrs_1.QueryBus])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

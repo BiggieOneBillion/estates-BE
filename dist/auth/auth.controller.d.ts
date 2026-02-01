@@ -1,4 +1,4 @@
-import { AuthService } from './auth.service';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { LoginRequestDto } from './dto/request/login.request.dto';
 import { RegisterRequestDto } from './dto/request/register.request.dto';
 import { VerifyLoginRequestDto } from './dto/request/verify-login.request.dto';
@@ -9,35 +9,21 @@ import { ResetPasswordRequestDto } from './dto/request/reset-password.request.dt
 import { VerifyPreAuthRequestDto } from './dto/request/verify-preauth.request.dto';
 import { Response } from 'express';
 export declare class AuthController {
-    private authService;
-    constructor(authService: AuthService);
+    private commandBus;
+    private queryBus;
+    constructor(commandBus: CommandBus, queryBus: QueryBus);
     login(loginDto: LoginRequestDto, req: any): Promise<any>;
-    VerifyLoginEmail(verifyLoginDto: VerifyLoginRequestDto): Promise<{
-        user: import("../users/dto/response/user.response.dto").UserResponseDto;
-        access_token: string;
-    }>;
-    Register(registerDto: RegisterRequestDto): Promise<{
-        access_token: string;
-    }>;
-    verifyPreAuth(verifyPreAuthDto: VerifyPreAuthRequestDto, req: any): Promise<{
-        user: import("../users/dto/response/user.response.dto").UserResponseDto;
-        access_token: string;
-    }>;
-    VerifyRegistrationEmail(verifyEmailDto: VerifyEmailRequestDto): Promise<{
-        message: string;
-        status: number;
-    }>;
+    VerifyLoginEmail(verifyLoginDto: VerifyLoginRequestDto): Promise<any>;
+    Register(registerDto: RegisterRequestDto): Promise<any>;
+    verifyPreAuth(verifyPreAuthDto: VerifyPreAuthRequestDto, req: any): Promise<any>;
+    VerifyRegistrationEmail(verifyEmailDto: VerifyEmailRequestDto): Promise<any>;
     getProfile(req: any): any;
-    requestPasswordReset(forgotPasswordDto: ForgotPasswordRequestDto): Promise<{
-        message: string;
-    }>;
+    requestPasswordReset(forgotPasswordDto: ForgotPasswordRequestDto): Promise<any>;
     verifyPasswordResetOTP(verifyResetOtpDto: VerifyResetOtpRequestDto, res: Response): Promise<{
         message: string;
     }>;
     resetPassword(resetPasswordDto: ResetPasswordRequestDto, req: any, res: Response): Promise<{
         message: string;
     }>;
-    logout(req: any): Promise<{
-        message: string;
-    }>;
+    logout(req: any): Promise<any>;
 }
