@@ -189,5 +189,18 @@ export class AuthController {
 
     return { message: 'Password has been reset successfully'};
   }
+
+  @ApiOperation({
+    summary: 'User logout',
+    description: 'Invalidates the current session and logs the user out.',
+  })
+  @ApiResponse({ status: 200, description: 'Logout successful' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Request() req) {
+    return this.authService.logout(req.user.userId);
+  }
 }
 

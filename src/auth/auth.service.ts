@@ -223,7 +223,7 @@ export class AuthService {
       type: 'auth',
       isVerified: true,
       version: user.tokenVersion,
-      // estate: user.estate,
+      estate: user?.estateId?.toString(),
     };
 
     const userInstance = plainToInstance(UserResponseDto, user, {
@@ -314,7 +314,7 @@ export class AuthService {
       type: 'auth',
       isVerified: false, // Registration still needs email verification
       version: 0, // Initial version
-      estate: user.estate,
+      // estate: user?.estateId?.toString(),
     };
 
     // console.log('PAYLOAD', payload);
@@ -410,7 +410,7 @@ export class AuthService {
       type: 'auth',
       isVerified: true,
       version: user.tokenVersion,
-      // estate: user.estate,
+      estate: user?.estateId?.toString(),
     };
 
     const userInstance = plainToInstance(UserResponseDto, user, {
@@ -522,5 +522,20 @@ export class AuthService {
       }
       throw error;
     }
+  }
+
+  async logout(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    user.isActive = false;
+    user.tokenVersion += 1; // Invalidate all current tokens
+    await user.save();
+
+    this.logger.log(`User logged out: ${user.email}`);
+
+    return { message: 'Logout successful' };
   }
 }
