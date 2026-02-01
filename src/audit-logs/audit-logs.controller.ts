@@ -4,7 +4,6 @@ import {
   Query,
   Param,
   UseGuards,
-  ParseIntPipe,
 } from '@nestjs/common';
 import { AuditLogsService } from './audit-logs.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -13,6 +12,8 @@ import { Roles } from 'src/auth/decorators/role.decorator';
 import { UserRole } from 'src/users/entities/user.entity';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { QueryBus } from '@nestjs/cqrs';
+import { FindAllAuditLogsQuery, GetAuditLogStatsQuery, FindAuditLogsByResourceQuery, FindAuditLogsByUserQuery } from './cqrs/queries/impl/audit-log-queries.impl';
 
 @ApiTags('Audit Logs')
 @ApiBearerAuth()
@@ -20,7 +21,10 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 @UseGuards(JwtAuthGuard, VerifiedGuard, RolesGuard)
 @Roles(UserRole.SUPER_ADMIN, UserRole.SITE_ADMIN)
 export class AuditLogsController {
-  constructor(private readonly auditLogsService: AuditLogsService) {}
+  constructor(
+    private readonly auditLogsService: AuditLogsService,
+    private readonly queryBus: QueryBus,
+  ) {}
 
   @Get()
   async findAll(
@@ -30,20 +34,20 @@ export class AuditLogsController {
     @Query('resource') resource?: string,
     @Query('userId') userId?: string,
   ) {
-    const query: any = {};
-    if (action) query.action = action;
-    if (resource) query.resource = resource;
-    if (userId) query.userId = userId;
+    const filter: any = {};
+    if (action) filter.action = action;
+    if (resource) filter.resource = resource;
+    if (userId) filter.userId = userId;
 
-    return this.auditLogsService.findAll(query, {
+    return this.queryBus.execute(new FindAllAuditLogsQuery(filter, {
       limit: limit ? Number(limit) : 100,
       skip: skip ? Number(skip) : 0,
-    });
+    }));
   }
 
   @Get('stats')
   async getStats() {
-    return this.auditLogsService.getStats();
+    return this.queryBus.execute(new GetAuditLogStatsQuery());
   }
 
   @Get('resource/:resource/:resourceId')
@@ -51,11 +55,11 @@ export class AuditLogsController {
     @Param('resource') resource: string,
     @Param('resourceId') resourceId: string,
   ) {
-    return this.auditLogsService.findByResource(resource, resourceId);
+    return this.queryBus.execute(new FindAuditLogsByResourceQuery(resource, resourceId));
   }
 
   @Get('user/:userId')
   async findByUser(@Param('userId') userId: string) {
-    return this.auditLogsService.findByUser(userId);
+    return this.queryBus.execute(new FindAuditLogsByUserQuery(userId));
   }
 }
