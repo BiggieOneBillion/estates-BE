@@ -9,6 +9,7 @@ export class DatabaseConfig {
   getMongoConfig(): MongooseModuleOptions {
     return {
       uri: this.configService.get<string>('MONGODB_URI'),
+      serverSelectionTimeoutMS: 5000,
     };
   }
 }

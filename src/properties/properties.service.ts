@@ -2,6 +2,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { SoftDeleteModel } from 'src/common/database/soft-delete.plugin';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { Property } from './entities/property.entity';
@@ -9,7 +10,7 @@ import { Property } from './entities/property.entity';
 @Injectable()
 export class PropertiesService {
   constructor(
-    @InjectModel(Property.name) private readonly propertyModel: Model<Property>,
+    @InjectModel(Property.name) private readonly propertyModel: SoftDeleteModel<Property>,
   ) {}
 
   async create(createPropertyDto: CreatePropertyDto): Promise<Property> {
@@ -53,8 +54,8 @@ export class PropertiesService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.propertyModel.deleteOne({ _id: id }).exec();
-    if (result.deletedCount === 0) {
+    const result = await this.propertyModel.softDelete({ _id: id });
+    if (result.matchedCount === 0) {
       throw new NotFoundException(`Property with ID ${id} not found`);
     }
   }

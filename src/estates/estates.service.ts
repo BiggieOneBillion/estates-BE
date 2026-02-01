@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model, ObjectId } from 'mongoose';
+import { SoftDeleteModel } from 'src/common/database/soft-delete.plugin';
 
 import { CreateEstateDto } from './dto/create-estate.dto';
 import { UpdateEstateDto } from './dto/update-estate.dto';
@@ -17,7 +18,7 @@ export class EstatesService {
   private readonly logger = new Logger(EstatesService.name);
 
   constructor(
-    @InjectModel(Estate.name) private readonly estateModel: Model<Estate>,
+    @InjectModel(Estate.name) private readonly estateModel: SoftDeleteModel<Estate>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectConnection() private readonly connection: Connection,
   ) {}
@@ -104,8 +105,8 @@ export class EstatesService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.estateModel.deleteOne({ _id: id }).exec();
-    if (result.deletedCount === 0) {
+    const result = await this.estateModel.softDelete({ _id: id });
+    if (result.matchedCount === 0) {
       throw new NotFoundException(`Estate with ID ${id} not found`);
     }
   }

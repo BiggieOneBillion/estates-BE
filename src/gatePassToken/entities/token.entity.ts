@@ -1,6 +1,6 @@
-// src/gatePassToken/entities/token.entity.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { softDeletePlugin, SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 
 export enum TokenType {
   GATE_PASS = 'gate_pass',
@@ -33,7 +33,11 @@ export enum hasUserVerifiedVisitorStatus {
 }
 
 @Schema({ timestamps: true })
-export class Token extends Document {
+export class Token extends Document implements SoftDeleteDocument {
+  isDeleted: boolean;
+  deletedAt?: Date;
+  softDelete: () => Promise<this>;
+  restore: () => Promise<this>;
   @Prop({ required: true, type: MongooseSchema.Types.ObjectId, ref: 'User' })
   user: string; // The user who created the gate pass (landlord, admin, or tenant)
 
@@ -99,3 +103,4 @@ export class Token extends Document {
 }
 
 export const TokenSchema = SchemaFactory.createForClass(Token);
+TokenSchema.plugin(softDeletePlugin);
