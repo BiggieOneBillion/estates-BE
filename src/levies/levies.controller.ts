@@ -19,8 +19,11 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/role.decorator';
 import { UserRole } from '../users/entities/user.entity';
-import { UsersService } from '../users/users.service';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CreateLevyCommand, UpdateLevyCommand, DeleteLevyCommand } from './cqrs/commands/impl/levy-commands.impl';
+import { FindAllLeviesQuery, FindActiveLeviesQuery, FindLevyByIdQuery } from './cqrs/queries/impl/levy-queries.impl';
+import { FindUserByIdQuery } from '../users/cqrs/queries/impl/find-user-by-id.query';
 
 @ApiTags('Levies')
 @ApiBearerAuth()
@@ -29,7 +32,8 @@ import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 export class LeviesController {
   constructor(
     private readonly leviesService: LeviesService,
-    private readonly usersService: UsersService,
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
   ) {}
 
   @ApiOperation({ summary: 'Create a new levy' })
@@ -37,52 +41,52 @@ export class LeviesController {
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   async create(@Body() createLevyDto: CreateLevyDto, @Request() req) {
-    const user = await this.usersService.findOne(req.user.userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {
       throw new ForbiddenException('User must belong to an estate');
     }
 
-    return this.leviesService.create(createLevyDto, req.user.userId, user.estateId.toString());
+    return this.commandBus.execute(new CreateLevyCommand(createLevyDto, req.user.userId, user.estateId.toString()));
   }
 
   @ApiOperation({ summary: 'Get all levies for estate' })
   @ApiResponse({ status: 200, description: 'Levies retrieved successfully' })
   @Get()
   async findAll(@Request() req) {
-    const user = await this.usersService.findOne(req.user.userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {
       throw new ForbiddenException('User must belong to an estate');
     }
 
-    return this.leviesService.findAll(user.estateId.toString());
+    return this.queryBus.execute(new FindAllLeviesQuery(user.estateId.toString()));
   }
 
   @ApiOperation({ summary: 'Get active levies only' })
   @ApiResponse({ status: 200, description: 'Active levies retrieved successfully' })
   @Get('active')
   async findActive(@Request() req) {
-    const user = await this.usersService.findOne(req.user.userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {
       throw new ForbiddenException('User must belong to an estate');
     }
 
-    return this.leviesService.findActive(user.estateId.toString());
+    return this.queryBus.execute(new FindActiveLeviesQuery(user.estateId.toString()));
   }
 
   @ApiOperation({ summary: 'Get levy by ID' })
   @ApiResponse({ status: 200, description: 'Levy retrieved successfully' })
   @Get(':id')
   async findOne(@Param('id') id: string, @Request() req) {
-    const user = await this.usersService.findOne(req.user.userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {
       throw new ForbiddenException('User must belong to an estate');
     }
 
-    return this.leviesService.findOne(id, user.estateId.toString());
+    return this.queryBus.execute(new FindLevyByIdQuery(id, user.estateId.toString()));
   }
 
   @ApiOperation({ summary: 'Update a levy' })
@@ -94,13 +98,13 @@ export class LeviesController {
     @Body() updateLevyDto: UpdateLevyDto,
     @Request() req,
   ) {
-    const user = await this.usersService.findOne(req.user.userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {
       throw new ForbiddenException('User must belong to an estate');
     }
 
-    return this.leviesService.update(id, updateLevyDto, user.estateId.toString());
+    return this.commandBus.execute(new UpdateLevyCommand(id, updateLevyDto, user.estateId.toString()));
   }
 
   @ApiOperation({ summary: 'Delete a levy' })
@@ -108,12 +112,12 @@ export class LeviesController {
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN)
   async remove(@Param('id') id: string, @Request() req) {
-    const user = await this.usersService.findOne(req.user.userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {
       throw new ForbiddenException('User must belong to an estate');
     }
 
-    return this.leviesService.remove(id, user.estateId.toString());
+    return this.commandBus.execute(new DeleteLevyCommand(id, user.estateId.toString()));
   }
 }
