@@ -16087,3 +16087,91 @@
 [2026-01-28T13:11:05.703Z] INFO: Body: {"name":"Greenwood Estate","location":{"address":"123 Estate Road","city":"Lagos","state":"Lagos State","country":"Nigeria","coordinates":{"lat":6.5244,"lng":3.3792}},"supportingDocuments":[{"filename":"deed.pdf","fileType":"application/pdf","url":"https://cdn.example.com/files/deed.pdf","uploadedAt":"2026-01-28"}],"description":"A serene residential estate.","logo":"https://cdn.example.com/logos/estate.png"}
 [2026-01-28T13:11:05.726Z] INFO: RESPONSE ⬅️ [POST] /api/estates/create 500 - 44ms
 [2026-01-28T13:11:05.726Z] INFO: ------------------------------------------------------------------
+[2026-01-28T17:43:20.103Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-28T17:43:20.104Z] INFO: Body: {"email":"user@example.com","password":"password123"}
+[2026-01-28T17:43:20.130Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 400 - 27ms
+[2026-01-28T17:43:20.130Z] INFO: ------------------------------------------------------------------
+[2026-01-28T17:44:37.994Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/register
+[2026-01-28T17:44:37.995Z] INFO: Body: {"firstName":"sam","lastName":"bun","email":"t@mail.com","password":"bakuGan&!90","phone":"09037245272"}
+[2026-01-28T17:44:38.143Z] INFO: RESPONSE ⬅️ [POST] /api/auth/register 201 - 149ms
+[2026-01-28T17:44:38.143Z] INFO: ------------------------------------------------------------------
+[2026-01-28T17:45:15.606Z] INFO: REQUEST STARTED ➡️ [GET] /api/auth/profile
+[2026-01-28T17:45:15.607Z] INFO: Body: undefined
+[2026-01-28T17:45:15.641Z] INFO: RESPONSE ⬅️ [GET] /api/auth/profile 403 - 35ms
+[2026-01-28T17:45:15.641Z] INFO: ------------------------------------------------------------------
+[2026-01-28T17:52:55.222Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/register
+[2026-01-28T17:52:55.227Z] INFO: Body: {"firstName":"gam","lastName":"mave","email":"bu@mail.com","password":"bakuGan&!90","phone":"09037245272"}
+[2026-01-28T17:53:02.874Z] INFO: RESPONSE ⬅️ [POST] /api/auth/register 201 - 7653ms
+[2026-01-28T17:53:02.875Z] INFO: ------------------------------------------------------------------
+[2026-01-28T17:55:12.341Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/verify-email
+[2026-01-28T17:55:12.343Z] INFO: Body: {"data":{"email":"bu@mail.com","code":"426118"}}
+[2026-01-28T17:55:12.423Z] INFO: RESPONSE ⬅️ [POST] /api/auth/verify-email 201 - 83ms
+[2026-01-28T17:55:12.423Z] INFO: ------------------------------------------------------------------
+[2026-01-28T17:55:31.459Z] INFO: REQUEST STARTED ➡️ [GET] /api/auth/profile
+[2026-01-28T17:55:31.462Z] INFO: Body: undefined
+[2026-01-28T17:55:31.491Z] INFO: RESPONSE ⬅️ [GET] /api/auth/profile 403 - 31ms
+[2026-01-28T17:55:31.491Z] INFO: ------------------------------------------------------------------
+[2026-01-28T17:55:33.017Z] INFO: REQUEST STARTED ➡️ [GET] /api/auth/profile
+[2026-01-28T17:55:33.018Z] INFO: Body: undefined
+[2026-01-28T17:55:33.036Z] INFO: RESPONSE ⬅️ [GET] /api/auth/profile 403 - 19ms
+[2026-01-28T17:55:33.037Z] INFO: ------------------------------------------------------------------
+[2026-01-28T17:56:09.043Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-28T17:56:09.046Z] INFO: Body: {"email":"bu@mail.com","password":"bakuGan&!90"}
+[2026-01-28T17:56:09.173Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 130ms
+[2026-01-28T17:56:09.173Z] INFO: ------------------------------------------------------------------
+[2026-01-28T17:56:48.827Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-28T17:56:48.827Z] INFO: Body: {"email":"bu@mail.com","code":"761811"}
+[2026-01-28T17:56:48.866Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 201 - 39ms
+[2026-01-28T17:56:48.866Z] INFO: ------------------------------------------------------------------
+[2026-01-28T17:57:21.824Z] INFO: REQUEST STARTED ➡️ [GET] /api/auth/profile
+[2026-01-28T17:57:21.825Z] INFO: Body: undefined
+[2026-01-28T17:57:21.861Z] INFO: RESPONSE ⬅️ [GET] /api/auth/profile 200 - 37ms
+[2026-01-28T17:57:21.861Z] INFO: ------------------------------------------------------------------
+[2026-01-28T18:01:04.561Z] INFO: REQUEST STARTED ➡️ [POST] /api/users/create/admin
+[2026-01-28T18:01:04.566Z] INFO: Body: {"firstName":"fred","lastName":"bentley","email":"fb@mail.com","password":"1q2w3e4r5t6y7U&!","phone":"09037245272","primaryRole":"admin","adminDetails":{"position":"facility_manager","customPositionTitle":"store-manager","department":"store"}}
+[2026-01-28T18:01:04.608Z] INFO: RESPONSE ⬅️ [POST] /api/users/create/admin 500 - 47ms
+[2026-01-28T18:01:04.608Z] INFO: ------------------------------------------------------------------
+[2026-01-28T18:03:11.823Z] INFO: REQUEST STARTED ➡️ [POST] /api/users/create/admin
+[2026-01-28T18:03:11.827Z] INFO: Body: {"firstName":"fred","lastName":"bentley","email":"fb@mail.com","password":"1q2w3e4r5t6y7U&!","phone":"09037245272","primaryRole":"admin","adminDetails":{"position":"facility_manager","customPositionTitle":"store-manager","department":"store"}}
+[2026-01-28T18:03:11.871Z] INFO: RESPONSE ⬅️ [POST] /api/users/create/admin 403 - 48ms
+[2026-01-28T18:03:11.872Z] INFO: ------------------------------------------------------------------
+[2026-01-28T18:03:46.595Z] INFO: REQUEST STARTED ➡️ [POST] /api/estates/create
+[2026-01-28T18:03:46.597Z] INFO: Body: {"name":"Greenwood Estate","location":{"address":"123 Estate Road","city":"Lagos","state":"Lagos State","country":"Nigeria","coordinates":{"lat":6.5244,"lng":3.3792}},"supportingDocuments":[{"filename":"deed.pdf","fileType":"application/pdf","url":"https://cdn.example.com/files/deed.pdf","uploadedAt":"2026-01-28T18:03:37.380Z"}],"description":"A serene residential estate.","logo":"https://cdn.example.com/logos/estate.png"}
+[2026-01-28T18:03:46.649Z] INFO: RESPONSE ⬅️ [POST] /api/estates/create 500 - 54ms
+[2026-01-28T18:03:46.650Z] INFO: ------------------------------------------------------------------
+[2026-01-28T23:16:05.194Z] INFO: REQUEST STARTED ➡️ [POST] /api/estates/create
+[2026-01-28T23:16:05.196Z] INFO: Body: {"name":"Greenwood Estate","location":{"address":"123 Estate Road","city":"Lagos","state":"Lagos State","country":"Nigeria","coordinates":{"lat":6.5244,"lng":3.3792}},"supportingDocuments":[{"filename":"deed.pdf","fileType":"application/pdf","url":"https://cdn.example.com/files/deed.pdf","uploadedAt":"2026-01-28T18:03:37.380Z"}],"description":"A serene residential estate.","logo":"https://cdn.example.com/logos/estate.png"}
+[2026-01-28T23:16:05.231Z] INFO: RESPONSE ⬅️ [POST] /api/estates/create 401 - 37ms
+[2026-01-28T23:16:05.231Z] INFO: ------------------------------------------------------------------
+[2026-01-28T23:16:35.289Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-28T23:16:35.290Z] INFO: Body: {"email":"bu@mail.com","password":"bakuGan&!90"}
+[2026-01-28T23:16:35.311Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 400 - 23ms
+[2026-01-28T23:16:35.312Z] INFO: ------------------------------------------------------------------
+[2026-01-28T23:16:50.721Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/register
+[2026-01-28T23:16:50.722Z] INFO: Body: {"firstName":"gam","lastName":"mave","email":"bu@mail.com","password":"bakuGan&!90","phone":"09037245272"}
+[2026-01-28T23:16:54.197Z] INFO: RESPONSE ⬅️ [POST] /api/auth/register 201 - 3476ms
+[2026-01-28T23:16:54.198Z] INFO: ------------------------------------------------------------------
+[2026-01-28T23:18:12.651Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/verify-email
+[2026-01-28T23:18:12.662Z] INFO: Body: {"data":{"email":"bu@mail.com","code":"407172"}}
+[2026-01-28T23:18:12.720Z] INFO: RESPONSE ⬅️ [POST] /api/auth/verify-email 201 - 71ms
+[2026-01-28T23:18:12.720Z] INFO: ------------------------------------------------------------------
+[2026-01-28T23:18:36.133Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login
+[2026-01-28T23:18:36.133Z] INFO: Body: {"email":"bu@mail.com","password":"bakuGan&!90"}
+[2026-01-28T23:18:36.267Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login 201 - 134ms
+[2026-01-28T23:18:36.267Z] INFO: ------------------------------------------------------------------
+[2026-01-28T23:19:22.274Z] INFO: REQUEST STARTED ➡️ [POST] /api/auth/login/verify
+[2026-01-28T23:19:22.275Z] INFO: Body: {"email":"bu@mail.com","code":"900580"}
+[2026-01-28T23:19:22.303Z] INFO: RESPONSE ⬅️ [POST] /api/auth/login/verify 201 - 29ms
+[2026-01-28T23:19:22.303Z] INFO: ------------------------------------------------------------------
+[2026-01-28T23:20:15.102Z] INFO: REQUEST STARTED ➡️ [POST] /api/estates/create
+[2026-01-28T23:20:15.103Z] INFO: Body: {"name":"Greenwood Estate","location":{"address":"123 Estate Road","city":"Lagos","state":"Lagos State","country":"Nigeria","coordinates":{"lat":6.5244,"lng":3.3792}},"supportingDocuments":[{"filename":"deed.pdf","fileType":"application/pdf","url":"https://cdn.example.com/files/deed.pdf","uploadedAt":"2026-01-28T18:03:37.380Z"}],"description":"A serene residential estate.","logo":"https://cdn.example.com/logos/estate.png"}
+[2026-01-28T23:20:15.158Z] INFO: RESPONSE ⬅️ [POST] /api/estates/create 201 - 57ms
+[2026-01-28T23:20:15.158Z] INFO: ------------------------------------------------------------------
+[2026-01-28T23:21:58.376Z] INFO: REQUEST STARTED ➡️ [POST] /api/users/create/admin
+[2026-01-28T23:21:58.378Z] INFO: Body: {"firstName":"fred","lastName":"bentley","email":"fb@mail.com","password":"1q2w3e4r5t6y7U&!","phone":"09037245272","primaryRole":"admin","adminDetails":{"position":"facility_manager","customPositionTitle":"store-manager","department":"store"}}
+[2026-01-28T23:22:01.324Z] INFO: RESPONSE ⬅️ [POST] /api/users/create/admin 201 - 2949ms
+[2026-01-28T23:22:01.324Z] INFO: ------------------------------------------------------------------
+[2026-01-28T23:26:00.195Z] INFO: REQUEST STARTED ➡️ [GET] /api/estates
+[2026-01-28T23:26:00.198Z] INFO: Body: undefined
+[2026-01-28T23:26:00.236Z] INFO: RESPONSE ⬅️ [GET] /api/estates 403 - 42ms
+[2026-01-28T23:26:00.236Z] INFO: ------------------------------------------------------------------

@@ -7,6 +7,7 @@ import {
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
+import { BullModule } from '@nestjs/bull';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -29,6 +30,7 @@ import { EventsModule } from './events/events.module';
 import { LeviesModule } from './levies/levies.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ComplianceModule } from './compliance/compliance.module';
+import { EventsInfrastructureModule } from './common/events/events-infrastructure.module';
 
 @Module({
   imports: [
@@ -43,6 +45,16 @@ import { ComplianceModule } from './compliance/compliance.module';
       ttl: 60000,
       limit: 10,
     }]),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        redis: {
+          host: configService.get('REDIS_HOST', 'localhost'),
+          port: configService.get('REDIS_PORT', 6379),
+        },
+      }),
+    }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -55,6 +67,7 @@ import { ComplianceModule } from './compliance/compliance.module';
       { name: User.name, schema: UserSchema },
       { name: Estate.name, schema: EstateSchema },
     ]),
+    EventsInfrastructureModule,
     AuthModule,
     UsersModule,
     EstatesModule,

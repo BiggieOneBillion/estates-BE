@@ -56,6 +56,9 @@ let UsersController = class UsersController {
                 throw new common_1.ForbiddenException('You do not have permission to create users');
             }
         }
+        if (!user?.estateId) {
+            throw new common_1.ForbiddenException('You cannot create admin before estate is created');
+        }
         return this.userManagement.createAdmin(userId, {
             firstName: createAdminDto.firstName,
             lastName: createAdminDto.lastName,
