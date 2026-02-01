@@ -22,7 +22,7 @@ import {
   AdminPosition,
   PermissionAction,
   ResourceType,
-} from '../entities/user.entity';
+} from '../../entities/user.entity';
 
 // Permission DTO
 export class CreatePermissionDto {
@@ -78,8 +78,8 @@ export class CreateRoleHierarchyDto {
   manages?: string[];
 }
 
-// Main Create User DTO
-export class CreateUserDto {
+// Main Create User Request DTO
+export class CreateUserRequestDto {
   // Basic Information
   @ApiProperty({ description: 'User first name' })
   @IsString()

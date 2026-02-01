@@ -1,13 +1,13 @@
 import { Model } from 'mongoose';
 import { User, UserRole, AdminPosition, Permission } from './entities/user.entity';
-import { MailService } from 'src/common/services/mail.service';
-import { CreateAdminDetailsDto } from './dto/create-admin.dto';
-import { CreateUserDto } from './dto/create-user.dto';
+import { EventPublisher } from 'src/common/events/services/event-publisher.service';
+import { CreateAdminDetailsDto } from './dto/request/create-admin.request.dto';
+import { CreateUserRequestDto } from './dto/request/create-user.request.dto';
 export declare class UserManagementService {
     private userModel;
-    private readonly mailService;
-    constructor(userModel: Model<User>, mailService: MailService);
-    createAdmin(superAdminId: string, adminData: {
+    private readonly eventPublisher;
+    constructor(userModel: Model<User>, eventPublisher: EventPublisher);
+    createAdmin(requesterId: string, adminData: {
         firstName: string;
         lastName: string;
         email: string;
@@ -17,15 +17,15 @@ export declare class UserManagementService {
         department?: string;
         additionalPermissions?: Permission[];
         existingLandlordId?: string;
-    }, estateId: string): Promise<User>;
-    createLandlord(creatorId: string, landlordData: {
+    }): Promise<User>;
+    createLandlord(requesterId: string, landlordData: {
         firstName: string;
         lastName: string;
         email: string;
         phone: string;
         ownedProperties?: string[];
         canCreateTenants?: boolean;
-    }, estateId: string): Promise<User>;
+    }): Promise<User>;
     createTenant(landlordId: string, tenantData: {
         firstName: string;
         lastName: string;
@@ -34,14 +34,14 @@ export declare class UserManagementService {
         propertyUnit?: string;
         leaseStartDate?: Date;
         leaseEndDate?: Date;
-    }, estateId: string): Promise<User>;
-    createUser(creatorId: string, userData: CreateUserDto, estateId: string): Promise<User>;
-    createSecurity(creatorId: string, securityData: {
+    }): Promise<User>;
+    createUser(requesterId: string, userData: CreateUserRequestDto): Promise<User>;
+    createSecurity(requesterId: string, securityData: {
         firstName: string;
         lastName: string;
         email: string;
         phone: string;
-    }, estateId: string): Promise<User>;
+    }): Promise<User>;
     makeLandlordAdmin(superAdminId: string, landlordId: string, adminDetails: CreateAdminDetailsDto, reason?: string): Promise<User>;
     removeAdminRole(superAdminId: string, adminId: string, reason?: string): Promise<User>;
     grantPermissions(granterId: string, userId: string, permissions: Permission[], reason?: string): Promise<User>;

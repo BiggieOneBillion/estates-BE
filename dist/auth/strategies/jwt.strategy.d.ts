@@ -16,6 +16,7 @@ export declare class JwtStrategy extends JwtStrategy_base {
         estate: string | undefined;
         type: "auth" | "pre-auth" | "password_reset";
         isVerified: boolean;
+        grantedPermissions: import("../../users/entities/user.entity").Permission[];
     }>;
 }
 export {};

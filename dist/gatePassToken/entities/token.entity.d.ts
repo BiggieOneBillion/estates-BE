@@ -1,4 +1,5 @@
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 export declare enum TokenType {
     GATE_PASS = "gate_pass",
     RESET_PASSWORD = "reset_password",
@@ -25,7 +26,11 @@ export declare enum hasUserVerifiedVisitorStatus {
     FAILED = "failed",
     UNVERIFIED = "unverified"
 }
-export declare class Token extends Document {
+export declare class Token extends Document implements SoftDeleteDocument {
+    isDeleted: boolean;
+    deletedAt?: Date;
+    softDelete: () => Promise<this>;
+    restore: () => Promise<this>;
     user: string;
     token: string;
     visitorName: string;

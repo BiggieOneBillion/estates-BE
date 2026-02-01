@@ -15,16 +15,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
-const mongoose_2 = require("mongoose");
 const bcrypt = require("bcrypt");
 const user_entity_1 = require("./entities/user.entity");
-const mail_service_1 = require("../common/services/mail.service");
+const class_transformer_1 = require("class-transformer");
+const user_response_dto_1 = require("./dto/response/user.response.dto");
 let UsersService = class UsersService {
     userModel;
-    mailService;
-    constructor(userModel, mailService) {
+    constructor(userModel) {
         this.userModel = userModel;
-        this.mailService = mailService;
     }
     async findAll() {
         return this.userModel.find().exec();
@@ -36,7 +34,18 @@ let UsersService = class UsersService {
         return this.userModel.find({ 'adminDetails.position': position }).exec();
     }
     async findByEstate(estateId) {
-        return this.userModel.find({ estateId });
+        console.log({ estateId });
+        const users = await this.userModel.find({ estateId: estateId });
+        console.log({ users });
+        if (!users) {
+            throw new common_1.NotFoundException(`No users found for estate ${estateId}`);
+        }
+        const filteredUsers = users.map((user) => {
+            return (0, class_transformer_1.plainToInstance)(user_response_dto_1.UserResponseDto, user, {
+                excludeExtraneousValues: true,
+            });
+        });
+        return filteredUsers;
     }
     async findOne(id) {
         const user = await this.userModel.findById(id).exec();
@@ -70,8 +79,8 @@ let UsersService = class UsersService {
         return updatedUser;
     }
     async remove(id) {
-        const result = await this.userModel.deleteOne({ _id: id }).exec();
-        if (result.deletedCount === 0) {
+        const result = await this.userModel.softDelete({ _id: id });
+        if (result.matchedCount === 0) {
             throw new common_1.NotFoundException(`User with ID ${id} not found`);
         }
     }
@@ -132,7 +141,6 @@ exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(user_entity_1.User.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model,
-        mail_service_1.MailService])
+    __metadata("design:paramtypes", [Object])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

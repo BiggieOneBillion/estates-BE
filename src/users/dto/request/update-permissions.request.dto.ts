@@ -1,9 +1,9 @@
 import { IsArray, IsNotEmpty, IsOptional, IsMongoId, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { CreatePermissionDto } from './create-user.dto';
+import { CreatePermissionDto } from './create-user.request.dto';
 
-export class UpdatePermissionsBodyDto {
+export class UpdatePermissionsBodyRequestDto {
   @ApiPropertyOptional({ type: [CreatePermissionDto], description: 'Base permissions' })
   @IsOptional()
   @IsArray()
@@ -26,12 +26,12 @@ export class UpdatePermissionsBodyDto {
   deniedPermissions?: CreatePermissionDto[];
 }
 
-export class UpdatePermissionsDto {
-  @ApiProperty({ type: UpdatePermissionsBodyDto, description: 'Permissions to update' })
+export class UpdatePermissionsRequestDto {
+  @ApiProperty({ type: UpdatePermissionsBodyRequestDto, description: 'Permissions to update' })
   @ValidateNested()
-  @Type(() => UpdatePermissionsBodyDto)
+  @Type(() => UpdatePermissionsBodyRequestDto)
   @IsNotEmpty()
-  permission: UpdatePermissionsBodyDto;
+  permission: UpdatePermissionsBodyRequestDto;
 
   @ApiProperty({ example: '60d5ecb8b392d60015f86539', description: 'Target user ID' })
   @IsMongoId()

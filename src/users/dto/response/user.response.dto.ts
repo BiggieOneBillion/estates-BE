@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 
-class NotificationPreferencesDto {
+export class NotificationPreferencesDto {
   @ApiProperty()
   email: boolean;
 
@@ -12,7 +12,7 @@ class NotificationPreferencesDto {
   sms: boolean;
 }
 
-class HierarchyDto {
+export class HierarchyDto {
   @ApiProperty()
   createdBy: string;
 
@@ -26,7 +26,7 @@ class HierarchyDto {
   relationshipEstablishedAt: string;
 }
 
-class PermissionDto {
+export class PermissionDto {
   @ApiProperty()
   @Expose()
   resource: string;
@@ -40,7 +40,7 @@ class PermissionDto {
   conditions?: string[];
 }
 
-class AdminDetailsDto {
+export class AdminDetailsDto {
   @ApiProperty()
   @Expose()
   position: string;
@@ -118,12 +118,4 @@ export class UserResponseDto {
   @Expose()
   @Type(() => AdminDetailsDto)
   adminDetails?: AdminDetailsDto;
-}
-
-export class VerifyLoginResponseDto {
-  @ApiProperty({ type: UserResponseDto })
-  user: UserResponseDto;
-
-  @ApiProperty()
-  access_token: string;
 }

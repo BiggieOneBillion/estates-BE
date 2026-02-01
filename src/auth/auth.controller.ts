@@ -11,7 +11,6 @@ import {
   Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { VerifiedGuard } from './guards/verified.guard';
 import {
@@ -21,16 +20,17 @@ import {
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
-import { RegisterDto } from './dto/register.dto';
-import { VerifyLoginDto } from './dto/verify-login.dto';
-import { VerifyEmailDto } from './dto/verify-email.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { VerifyLoginResponseDto } from './dto/verify-login-response.dto';
-import { VerifyPreAuthDto } from './dto/verify-preauth.dto';
+import { LoginRequestDto } from './dto/request/login.request.dto';
+import { RegisterRequestDto } from './dto/request/register.request.dto';
+import { VerifyLoginRequestDto } from './dto/request/verify-login.request.dto';
+import { VerifyEmailRequestDto } from './dto/request/verify-email.request.dto';
+import { ForgotPasswordRequestDto } from './dto/request/forgot-password.request.dto';
+import { VerifyResetOtpRequestDto } from './dto/request/verify-reset-otp.request.dto';
+import { ResetPasswordRequestDto } from './dto/request/reset-password.request.dto';
+import { VerifyLoginResponseDto } from './dto/response/verify-login.response.dto';
+import { VerifyPreAuthRequestDto } from './dto/request/verify-preauth.request.dto';
 import { Response } from 'express';
-import { request } from 'http';
+// import { request } from 'http';
 
 /**
  * Authentication Controller
@@ -50,7 +50,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @Post('login')
-  async login(@Body() loginDto: LoginDto, @Request() req) {
+  async login(@Body() loginDto: LoginRequestDto, @Request() req) {
     const userAgent = req.headers['user-agent'];
     const isMobile = /mobile/i.test(userAgent);
     return this.authService.login(loginDto, isMobile);
@@ -67,7 +67,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
   @Post('login/verify')
-  async VerifyLoginEmail(@Body() verifyLoginDto: VerifyLoginDto) {
+  async VerifyLoginEmail(@Body() verifyLoginDto: VerifyLoginRequestDto) {
     return this.authService.validateUserEmailLogin(verifyLoginDto);
   }
 
@@ -78,7 +78,7 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Registration successful' })
   @ApiResponse({ status: 400, description: 'Bad request or user already exists' })
   @Post('register')
-  async Register(@Body() registerDto: RegisterDto) {
+  async Register(@Body() registerDto: RegisterRequestDto) {
     console.log(registerDto);
     return this.authService.register(registerDto);
   }
@@ -95,7 +95,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('verify-preauth')
-  async verifyPreAuth(@Body() verifyPreAuthDto: VerifyPreAuthDto, @Request() req) {
+  async verifyPreAuth(@Body() verifyPreAuthDto: VerifyPreAuthRequestDto, @Request() req) {
     return this.authService.verifyPreAuth(verifyPreAuthDto, req.user);
   }
 
@@ -109,7 +109,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('verify-email')
   async VerifyRegistrationEmail(
-    @Body() verifyEmailDto: VerifyEmailDto,
+    @Body() verifyEmailDto: VerifyEmailRequestDto,
   ) {
     return this.authService.verifyEmail(verifyEmailDto.data);
   }
@@ -134,7 +134,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password reset OTP sent successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @Post('forgot-password')
-  async requestPasswordReset(@Body() forgotPasswordDto: ForgotPasswordDto) {
+  async requestPasswordReset(@Body() forgotPasswordDto: ForgotPasswordRequestDto) {
     return this.authService.sendPasswordResetOTP(forgotPasswordDto.email);
   }
 
@@ -146,7 +146,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired OTP' })
   @Post('verify-reset-otp')
   async verifyPasswordResetOTP(
-    @Body() verifyResetOtpDto: VerifyResetOtpDto,
+    @Body() verifyResetOtpDto: VerifyResetOtpRequestDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const { token } = await this.authService.verifyPasswordResetOTP(
@@ -174,7 +174,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Reset token is missing or expired' })
   @Post('reset-password')
   async resetPassword(
-    @Body() resetPasswordDto: ResetPasswordDto,
+    @Body() resetPasswordDto: ResetPasswordRequestDto,
     @Request() req,
     @Res({ passthrough: true }) res: Response,
   ) {

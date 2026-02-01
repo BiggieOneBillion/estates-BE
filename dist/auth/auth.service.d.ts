@@ -1,20 +1,20 @@
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+import { LoginRequestDto } from './dto/request/login.request.dto';
+import { RegisterRequestDto } from './dto/request/register.request.dto';
 import { User } from 'src/users/entities/user.entity';
 import { Model } from 'mongoose';
-import { MailService } from 'src/common/services/mail.service';
-import { UserResponseDto } from './dto/verify-login-response.dto';
+import { UserResponseDto } from 'src/users/dto/response/user.response.dto';
+import { EventPublisher } from 'src/common/events/services/event-publisher.service';
 export declare class AuthService {
     private usersService;
     private jwtService;
     private readonly userModel;
-    private mailService;
+    private eventPublisher;
     private readonly logger;
-    constructor(usersService: UsersService, jwtService: JwtService, userModel: Model<User>, mailService: MailService);
+    constructor(usersService: UsersService, jwtService: JwtService, userModel: Model<User>, eventPublisher: EventPublisher);
     validateUser(email: string, password: string, isMobile: boolean): Promise<any>;
-    login(loginDto: LoginDto, isMobile: boolean): Promise<any>;
+    login(loginDto: LoginRequestDto, isMobile: boolean): Promise<any>;
     validateUserEmailLogin(info: {
         email: string;
         code: string;
@@ -22,8 +22,8 @@ export declare class AuthService {
         user: UserResponseDto;
         access_token: string;
     }>;
-    validateUserRegistering(registerDto: RegisterDto): Promise<any>;
-    register(registerDto: RegisterDto): Promise<{
+    validateUserRegistering(registerDto: RegisterRequestDto): Promise<any>;
+    register(registerDto: RegisterRequestDto): Promise<{
         access_token: string;
     }>;
     verifyEmail(info: {
@@ -47,6 +47,9 @@ export declare class AuthService {
         token: string;
     }>;
     resetPassword(resetToken: string, newPassword: string): Promise<{
+        message: string;
+    }>;
+    logout(userId: string): Promise<{
         message: string;
     }>;
 }

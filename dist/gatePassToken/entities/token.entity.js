@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TokenSchema = exports.Token = exports.hasUserVerifiedVisitorStatus = exports.MeansOfIdentification = exports.VisitorType = exports.TokenType = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
+const soft_delete_plugin_1 = require("../../common/database/soft-delete.plugin");
 var TokenType;
 (function (TokenType) {
     TokenType["GATE_PASS"] = "gate_pass";
@@ -43,6 +44,10 @@ var hasUserVerifiedVisitorStatus;
     hasUserVerifiedVisitorStatus["UNVERIFIED"] = "unverified";
 })(hasUserVerifiedVisitorStatus || (exports.hasUserVerifiedVisitorStatus = hasUserVerifiedVisitorStatus = {}));
 let Token = class Token extends mongoose_2.Document {
+    isDeleted;
+    deletedAt;
+    softDelete;
+    restore;
     user;
     token;
     visitorName;
@@ -149,4 +154,5 @@ exports.Token = Token = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Token);
 exports.TokenSchema = mongoose_1.SchemaFactory.createForClass(Token);
+exports.TokenSchema.plugin(soft_delete_plugin_1.softDeletePlugin);
 //# sourceMappingURL=token.entity.js.map

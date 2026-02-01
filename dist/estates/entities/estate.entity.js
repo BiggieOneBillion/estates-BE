@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EstateSchema = exports.Estate = exports.SubscriptionStatus = exports.SubscriptionPlan = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
+const soft_delete_plugin_1 = require("../../common/database/soft-delete.plugin");
 var SubscriptionPlan;
 (function (SubscriptionPlan) {
     SubscriptionPlan["MONTHLY"] = "monthly";
@@ -26,6 +27,10 @@ var SubscriptionStatus;
 })(SubscriptionStatus || (exports.SubscriptionStatus = SubscriptionStatus = {}));
 const now = new Date();
 let Estate = class Estate extends mongoose_2.Document {
+    isDeleted;
+    deletedAt;
+    softDelete;
+    restore;
     owner;
     name;
     location;
@@ -121,4 +126,5 @@ exports.Estate = Estate = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Estate);
 exports.EstateSchema = mongoose_1.SchemaFactory.createForClass(Estate);
+exports.EstateSchema.plugin(soft_delete_plugin_1.softDeletePlugin);
 //# sourceMappingURL=estate.entity.js.map

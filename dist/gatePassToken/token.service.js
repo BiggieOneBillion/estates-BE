@@ -16,7 +16,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TokenService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
-const mongoose_2 = require("mongoose");
 const token_entity_1 = require("./entities/token.entity");
 const crypto = require("crypto");
 const event_emitter_1 = require("@nestjs/event-emitter");
@@ -169,8 +168,8 @@ let TokenService = TokenService_1 = class TokenService {
         return savedToken;
     }
     async remove(id) {
-        const result = await this.tokenModel.deleteOne({ _id: id }).exec();
-        if (result.deletedCount === 0) {
+        const result = await this.tokenModel.softDelete({ _id: id });
+        if (result.matchedCount === 0) {
             throw new common_1.NotFoundException(`Token with ID ${id} not found`);
         }
     }
@@ -182,8 +181,7 @@ exports.TokenService = TokenService;
 exports.TokenService = TokenService = TokenService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(token_entity_1.Token.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model,
-        event_emitter_1.EventEmitter2,
+    __metadata("design:paramtypes", [Object, event_emitter_1.EventEmitter2,
         users_service_1.UsersService,
         compliance_service_1.ComplianceService])
 ], TokenService);

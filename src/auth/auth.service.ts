@@ -9,12 +9,13 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+import { LoginRequestDto } from './dto/request/login.request.dto';
+import { RegisterRequestDto } from './dto/request/register.request.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserRole } from 'src/users/entities/user.entity';
 import { Model } from 'mongoose';
-import { UserResponseDto, VerifyLoginResponseDto } from './dto/verify-login-response.dto';
+import { VerifyLoginResponseDto } from './dto/response/verify-login.response.dto';
+import { UserResponseDto } from 'src/users/dto/response/user.response.dto';
 import { plainToInstance } from "class-transformer"
 import { EventPublisher } from 'src/common/events/services/event-publisher.service';
 import {
@@ -170,7 +171,7 @@ export class AuthService {
     return userObject;
   }
 
-  async login(loginDto: LoginDto, isMobile: boolean) {
+  async login(loginDto: LoginRequestDto, isMobile: boolean) {
     const result = await this.validateUser(
       loginDto.email,
       loginDto.password,
@@ -238,7 +239,7 @@ export class AuthService {
     };
   }
 
-  async validateUserRegistering(registerDto: RegisterDto): Promise<any> {
+  async validateUserRegistering(registerDto: RegisterRequestDto): Promise<any> {
     // console.log('Inside service');
     const existingUser = await this.usersService.findByEmail(registerDto.email);
 
@@ -304,7 +305,7 @@ export class AuthService {
     return resObj;
   }
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterRequestDto) {
     const user = await this.validateUserRegistering(registerDto);
     console.log('USER', user);
     const payload: JwtPayload = {

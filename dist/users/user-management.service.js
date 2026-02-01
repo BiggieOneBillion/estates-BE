@@ -17,20 +17,25 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const user_entity_1 = require("./entities/user.entity");
-const mail_service_1 = require("../common/services/mail.service");
+const event_publisher_service_1 = require("../common/events/services/event-publisher.service");
+const user_events_1 = require("../common/events/domain/user-events");
 const bcrypt = require("bcrypt");
 let UserManagementService = class UserManagementService {
     userModel;
-    mailService;
-    constructor(userModel, mailService) {
+    eventPublisher;
+    constructor(userModel, eventPublisher) {
         this.userModel = userModel;
-        this.mailService = mailService;
+        this.eventPublisher = eventPublisher;
     }
-    async createAdmin(superAdminId, adminData, estateId) {
-        const creator = await this.userModel.findById(superAdminId);
-        if (!creator || creator.primaryRole !== user_entity_1.UserRole.SUPER_ADMIN) {
-            throw new common_1.ForbiddenException('Only super admins can create admin users');
+    async createAdmin(requesterId, adminData) {
+        const requester = await this.userModel.findById(requesterId);
+        if (!requester) {
+            throw new common_1.ForbiddenException('Requester not found');
         }
+        if (!requester.estateId && requester.primaryRole !== user_entity_1.UserRole.SUPER_ADMIN) {
+            throw new common_1.ForbiddenException('Requester must belong to an estate');
+        }
+        const estateId = requester.estateId?.toString();
         let newAdmin;
         if (adminData.existingLandlordId) {
             const landlord = await this.userModel.findById(adminData.existingLandlordId);
@@ -46,13 +51,13 @@ let UserManagementService = class UserManagementService {
                     positionPermissions: this.getPositionPermissions(adminData.position),
                     additionalPermissions: adminData.additionalPermissions || [],
                     appointedAt: new Date(),
-                    appointedBy: superAdminId,
+                    appointedBy: requesterId,
                 },
                 $push: {
                     roleHistory: {
                         fromRole: user_entity_1.UserRole.LANDLORD,
                         toRole: user_entity_1.UserRole.ADMIN,
-                        changedBy: superAdminId,
+                        changedBy: requesterId,
                         changedAt: new Date(),
                         reason: `Promoted to ${adminData.position}`,
                     },
@@ -78,39 +83,37 @@ let UserManagementService = class UserManagementService {
                     positionPermissions: this.getPositionPermissions(adminData.position),
                     additionalPermissions: adminData.additionalPermissions || [],
                     appointedAt: new Date(),
-                    appointedBy: superAdminId,
+                    appointedBy: requesterId,
                 },
                 hierarchy: {
-                    createdBy: superAdminId,
-                    reportsTo: superAdminId,
+                    createdBy: requesterId,
+                    reportsTo: requesterId,
                     manages: [],
                     relationshipEstablishedAt: new Date(),
                 },
                 isTemporaryPassword: true,
             });
             await newAdmin.save();
-            await this.mailService.accountCreationEmail({
-                to: newAdmin.email,
-                name: `${newAdmin.firstName} ${newAdmin.lastName}`,
+            const event = new user_events_1.UserAccountCreatedEvent({
+                userId: newAdmin._id.toString(),
+                email: newAdmin.email,
+                firstName: newAdmin.firstName,
+                lastName: newAdmin.lastName,
                 password,
             });
+            await this.eventPublisher.publish(event);
         }
-        await this.userModel.findByIdAndUpdate(superAdminId, {
+        await this.userModel.findByIdAndUpdate(requesterId, {
             $addToSet: { 'hierarchy.manages': newAdmin._id },
         });
         return newAdmin;
     }
-    async createLandlord(creatorId, landlordData, estateId) {
-        const creator = await this.userModel.findById(creatorId);
-        if (!creator) {
-            throw new common_1.BadRequestException('Invalid creator ID');
+    async createLandlord(requesterId, landlordData) {
+        const requester = await this.userModel.findById(requesterId);
+        if (!requester || !requester.estateId) {
+            throw new common_1.ForbiddenException('Requester must belong to an estate');
         }
-        const canCreateLandlord = creator.primaryRole === user_entity_1.UserRole.SUPER_ADMIN ||
-            (creator.primaryRole === user_entity_1.UserRole.ADMIN &&
-                this.hasPermission(creator, 'landlords', 'create'));
-        if (!canCreateLandlord) {
-            throw new common_1.ForbiddenException('Insufficient permissions to create landlord');
-        }
+        const estateId = requester.estateId.toString();
         const password = this.generateTemporaryPassword();
         const hashedPassword = await bcrypt.hash(password, 10);
         const newLandlord = new this.userModel({
@@ -128,29 +131,33 @@ let UserManagementService = class UserManagementService {
                 isEligibleForAdmin: true,
             },
             hierarchy: {
-                createdBy: creatorId,
-                reportsTo: creatorId,
+                createdBy: requesterId,
+                reportsTo: requesterId,
                 manages: [],
                 relationshipEstablishedAt: new Date(),
             },
             isTemporaryPassword: true,
         });
         await newLandlord.save();
-        await this.userModel.findByIdAndUpdate(creatorId, {
+        await this.userModel.findByIdAndUpdate(requesterId, {
             $addToSet: { 'hierarchy.manages': newLandlord._id },
         });
-        await this.mailService.accountCreationEmail({
-            to: newLandlord.email,
-            name: `${newLandlord.firstName} ${newLandlord.lastName}`,
+        const event = new user_events_1.UserAccountCreatedEvent({
+            userId: newLandlord._id.toString(),
+            email: newLandlord.email,
+            firstName: newLandlord.firstName,
+            lastName: newLandlord.lastName,
             password,
         });
+        await this.eventPublisher.publish(event);
         return newLandlord;
     }
-    async createTenant(landlordId, tenantData, estateId) {
+    async createTenant(landlordId, tenantData) {
         const landlord = await this.userModel.findById(landlordId);
-        if (!landlord) {
-            throw new common_1.BadRequestException('Landlord not found');
+        if (!landlord || !landlord.estateId) {
+            throw new common_1.BadRequestException('Landlord not found or doesn\'t belong to an estate');
         }
+        const estateId = landlord.estateId.toString();
         if (landlord.primaryRole === user_entity_1.UserRole.LANDLORD && !landlord.landlordDetails?.canCreateTenants) {
             throw new common_1.ForbiddenException('Landlord does not have permission to create tenants');
         }
@@ -188,24 +195,22 @@ let UserManagementService = class UserManagementService {
                 },
             });
         }
-        await this.mailService.accountCreationEmail({
-            to: newTenant.email,
-            name: `${newTenant.firstName} ${newTenant.lastName}`,
+        const event = new user_events_1.UserAccountCreatedEvent({
+            userId: newTenant._id.toString(),
+            email: newTenant.email,
+            firstName: newTenant.firstName,
+            lastName: newTenant.lastName,
             password,
         });
+        await this.eventPublisher.publish(event);
         return newTenant;
     }
-    async createUser(creatorId, userData, estateId) {
-        const creator = await this.userModel.findById(creatorId);
-        if (!creator) {
-            throw new common_1.BadRequestException('Invalid creator ID');
+    async createUser(requesterId, userData) {
+        const requester = await this.userModel.findById(requesterId);
+        if (!requester || !requester.estateId) {
+            throw new common_1.BadRequestException('Requester not found or doesn\'t belong to an estate');
         }
-        const canCreateUser = creator.primaryRole === user_entity_1.UserRole.SUPER_ADMIN ||
-            (creator.primaryRole === user_entity_1.UserRole.ADMIN &&
-                this.hasPermission(creator, 'users', 'create'));
-        if (!canCreateUser) {
-            throw new common_1.ForbiddenException('Insufficient permissions to create user');
-        }
+        const estateId = requester.estateId.toString();
         const existingUser = await this.userModel.findOne({ email: userData.email });
         if (existingUser) {
             throw new common_1.BadRequestException('User with this email already exists');
@@ -217,44 +222,42 @@ let UserManagementService = class UserManagementService {
             password: hashedPassword,
             estateId,
             hierarchy: {
-                createdBy: creatorId,
-                reportsTo: creatorId,
+                createdBy: requesterId,
+                reportsTo: requesterId,
                 manages: [],
                 relationshipEstablishedAt: new Date(),
             },
             isTemporaryPassword: !userData.password,
         });
         await newUser.save();
-        await this.userModel.findByIdAndUpdate(creatorId, {
+        await this.userModel.findByIdAndUpdate(requesterId, {
             $addToSet: { 'hierarchy.manages': newUser._id },
         });
         if (newUser.primaryRole !== user_entity_1.UserRole.SUPER_ADMIN &&
             newUser.primaryRole !== user_entity_1.UserRole.SITE_ADMIN) {
-            await this.mailService.accountCreationEmail({
-                to: newUser.email,
-                name: `${newUser.firstName} ${newUser.lastName}`,
+            const event = new user_events_1.UserAccountCreatedEvent({
+                userId: newUser._id.toString(),
+                email: newUser.email,
+                firstName: newUser.firstName,
+                lastName: newUser.lastName,
                 password,
             });
+            await this.eventPublisher.publish(event);
         }
         return newUser;
     }
-    async createSecurity(creatorId, securityData, estateId) {
+    async createSecurity(requesterId, securityData) {
+        const requester = await this.userModel.findById(requesterId);
+        if (!requester || !requester.estateId) {
+            throw new common_1.BadRequestException('Requester not found or doesn\'t belong to an estate');
+        }
+        const estateId = requester.estateId.toString();
         const isSecurityAlready = await this.userModel.findOne({
             primaryRole: user_entity_1.UserRole.SECURITY,
             estateId,
         });
         if (isSecurityAlready) {
             throw new common_1.BadRequestException('Security already exists for this estate');
-        }
-        const creator = await this.userModel.findById(creatorId);
-        if (!creator) {
-            throw new common_1.BadRequestException('Invalid creator ID');
-        }
-        const canCreateSecurity = creator.primaryRole === user_entity_1.UserRole.SUPER_ADMIN ||
-            (creator.primaryRole === user_entity_1.UserRole.ADMIN &&
-                this.hasPermission(creator, 'security', 'create'));
-        if (!canCreateSecurity) {
-            throw new common_1.ForbiddenException('Insufficient permissions to create security');
         }
         const password = this.generateTemporaryPassword();
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -267,25 +270,28 @@ let UserManagementService = class UserManagementService {
             primaryRole: user_entity_1.UserRole.SECURITY,
             estateId,
             securityDetails: {
-                supervisorId: creatorId,
+                supervisorId: requesterId,
             },
             hierarchy: {
-                createdBy: creatorId,
-                reportsTo: creatorId,
+                createdBy: requesterId,
+                reportsTo: requesterId,
                 manages: [],
                 relationshipEstablishedAt: new Date(),
             },
             isTemporaryPassword: true,
         });
         await newSecurity.save();
-        await this.userModel.findByIdAndUpdate(creatorId, {
+        await this.userModel.findByIdAndUpdate(requesterId, {
             $addToSet: { 'hierarchy.manages': newSecurity._id },
         });
-        await this.mailService.accountCreationEmail({
-            to: newSecurity.email,
-            name: `${newSecurity.firstName} ${newSecurity.lastName}`,
+        const event = new user_events_1.UserAccountCreatedEvent({
+            userId: newSecurity._id.toString(),
+            email: newSecurity.email,
+            firstName: newSecurity.firstName,
+            lastName: newSecurity.lastName,
             password,
         });
+        await this.eventPublisher.publish(event);
         return newSecurity;
     }
     async makeLandlordAdmin(superAdminId, landlordId, adminDetails, reason) {
@@ -483,6 +489,6 @@ exports.UserManagementService = UserManagementService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(user_entity_1.User.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        mail_service_1.MailService])
+        event_publisher_service_1.EventPublisher])
 ], UserManagementService);
 //# sourceMappingURL=user-management.service.js.map

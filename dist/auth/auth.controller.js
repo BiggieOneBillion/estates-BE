@@ -15,18 +15,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
-const login_dto_1 = require("./dto/login.dto");
 const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
 const verified_guard_1 = require("./guards/verified.guard");
 const swagger_1 = require("@nestjs/swagger");
-const register_dto_1 = require("./dto/register.dto");
-const verify_login_dto_1 = require("./dto/verify-login.dto");
-const verify_email_dto_1 = require("./dto/verify-email.dto");
-const forgot_password_dto_1 = require("./dto/forgot-password.dto");
-const verify_reset_otp_dto_1 = require("./dto/verify-reset-otp.dto");
-const reset_password_dto_1 = require("./dto/reset-password.dto");
-const verify_login_response_dto_1 = require("./dto/verify-login-response.dto");
-const verify_preauth_dto_1 = require("./dto/verify-preauth.dto");
+const login_request_dto_1 = require("./dto/request/login.request.dto");
+const register_request_dto_1 = require("./dto/request/register.request.dto");
+const verify_login_request_dto_1 = require("./dto/request/verify-login.request.dto");
+const verify_email_request_dto_1 = require("./dto/request/verify-email.request.dto");
+const forgot_password_request_dto_1 = require("./dto/request/forgot-password.request.dto");
+const verify_reset_otp_request_dto_1 = require("./dto/request/verify-reset-otp.request.dto");
+const reset_password_request_dto_1 = require("./dto/request/reset-password.request.dto");
+const verify_login_response_dto_1 = require("./dto/response/verify-login.response.dto");
+const verify_preauth_request_dto_1 = require("./dto/request/verify-preauth.request.dto");
 let AuthController = class AuthController {
     authService;
     constructor(authService) {
@@ -77,6 +77,9 @@ let AuthController = class AuthController {
         res.clearCookie('reset_token');
         return { message: 'Password has been reset successfully' };
     }
+    async logout(req) {
+        return this.authService.logout(req.user.userId);
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
@@ -90,7 +93,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
+    __metadata("design:paramtypes", [login_request_dto_1.LoginRequestDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
@@ -107,7 +110,7 @@ __decorate([
     (0, common_1.Post)('login/verify'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [verify_login_dto_1.VerifyLoginDto]),
+    __metadata("design:paramtypes", [verify_login_request_dto_1.VerifyLoginRequestDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "VerifyLoginEmail", null);
 __decorate([
@@ -120,7 +123,7 @@ __decorate([
     (0, common_1.Post)('register'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [register_dto_1.RegisterDto]),
+    __metadata("design:paramtypes", [register_request_dto_1.RegisterRequestDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "Register", null);
 __decorate([
@@ -139,7 +142,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [verify_preauth_dto_1.VerifyPreAuthDto, Object]),
+    __metadata("design:paramtypes", [verify_preauth_request_dto_1.VerifyPreAuthRequestDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verifyPreAuth", null);
 __decorate([
@@ -154,7 +157,7 @@ __decorate([
     (0, common_1.Post)('verify-email'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [verify_email_dto_1.VerifyEmailDto]),
+    __metadata("design:paramtypes", [verify_email_request_dto_1.VerifyEmailRequestDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "VerifyRegistrationEmail", null);
 __decorate([
@@ -182,7 +185,7 @@ __decorate([
     (0, common_1.Post)('forgot-password'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [forgot_password_dto_1.ForgotPasswordDto]),
+    __metadata("design:paramtypes", [forgot_password_request_dto_1.ForgotPasswordRequestDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "requestPasswordReset", null);
 __decorate([
@@ -196,7 +199,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [verify_reset_otp_dto_1.VerifyResetOtpDto, Object]),
+    __metadata("design:paramtypes", [verify_reset_otp_request_dto_1.VerifyResetOtpRequestDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "verifyPasswordResetOTP", null);
 __decorate([
@@ -211,9 +214,24 @@ __decorate([
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [reset_password_dto_1.ResetPasswordDto, Object, Object]),
+    __metadata("design:paramtypes", [reset_password_request_dto_1.ResetPasswordRequestDto, Object, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "resetPassword", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'User logout',
+        description: 'Invalidates the current session and logs the user out.',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Logout successful' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Unauthorized' }),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('logout'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "logout", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.Controller)('auth'),

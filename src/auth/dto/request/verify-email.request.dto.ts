@@ -20,7 +20,7 @@ class EmailVerificationData {
   code: string;
 }
 
-export class VerifyEmailDto {
+export class VerifyEmailRequestDto {
   @ApiProperty({
     type: EmailVerificationData,
     description: 'Data containing email and verification code',

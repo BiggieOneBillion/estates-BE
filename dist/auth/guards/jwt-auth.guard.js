@@ -17,6 +17,7 @@ let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
         if (err || !user) {
             throw err || new common_1.UnauthorizedException('Authentication required');
         }
+        console.log("JWT TOKEN USER---", user);
         return user;
     }
 };

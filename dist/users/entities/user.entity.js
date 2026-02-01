@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserSchema = exports.User = exports.LandlordDetails = exports.TenantDetails = exports.SecurityDetails = exports.RoleHierarchy = exports.AdminDetails = exports.Permission = exports.ResourceType = exports.PermissionAction = exports.AdminPosition = exports.UserRole = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
+const soft_delete_plugin_1 = require("../../common/database/soft-delete.plugin");
 var UserRole;
 (function (UserRole) {
     UserRole["SITE_ADMIN"] = "site_admin";
@@ -30,8 +31,8 @@ var AdminPosition;
     AdminPosition["OPERATIONS_MANAGER"] = "operations_manager";
     AdminPosition["PROPERTY_MANAGER"] = "property_manager";
     AdminPosition["TENANT_RELATIONS"] = "tenant_relations";
-    AdminPosition["CUSTOM"] = "custom";
     AdminPosition["SUPER_ADMIN"] = "super_admin";
+    AdminPosition["CUSTOM"] = "custom";
 })(AdminPosition || (exports.AdminPosition = AdminPosition = {}));
 var PermissionAction;
 (function (PermissionAction) {
@@ -252,6 +253,10 @@ exports.LandlordDetails = LandlordDetails = __decorate([
     (0, mongoose_1.Schema)({ _id: false })
 ], LandlordDetails);
 let User = class User extends mongoose_2.Document {
+    isDeleted;
+    deletedAt;
+    softDelete;
+    restore;
     firstName;
     lastName;
     email;
@@ -495,7 +500,7 @@ exports.User = User = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], User);
 exports.UserSchema = mongoose_1.SchemaFactory.createForClass(User);
-exports.UserSchema.index({ email: 1 });
+exports.UserSchema.plugin(soft_delete_plugin_1.softDeletePlugin);
 exports.UserSchema.index({ estateId: 1, primaryRole: 1 });
 exports.UserSchema.index({ 'hierarchy.createdBy': 1 });
 exports.UserSchema.index({ 'hierarchy.reportsTo': 1 });

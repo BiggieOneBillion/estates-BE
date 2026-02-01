@@ -1,9 +1,9 @@
 import { IsString, IsEmail, IsNotEmpty, IsOptional, IsArray, IsBoolean, IsEnum, MinLength, MaxLength, Matches } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '../entities/user.entity';
+import { UserRole } from '../../entities/user.entity';
 
-export class CreateLandlordDto {
+export class CreateLandlordRequestDto {
   @ApiProperty({ description: 'User first name' })
   @IsString()
   @IsNotEmpty()

@@ -9,7 +9,7 @@ import {
 import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class RegisterDto {
+export class RegisterRequestDto {
   @ApiProperty({ description: 'User first name' })
   @IsString()
   @IsNotEmpty()

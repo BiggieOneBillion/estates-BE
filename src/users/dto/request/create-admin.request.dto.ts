@@ -1,8 +1,8 @@
 import { IsString, IsEmail, IsNotEmpty, IsOptional, IsEnum, ValidateNested, IsMongoId, MaxLength, IsArray, MinLength, Matches } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CreatePermissionDto } from './create-user.dto';
-import { UserRole, AdminPosition } from '../entities/user.entity';
+import { CreatePermissionDto } from './create-user.request.dto';
+import { UserRole, AdminPosition } from '../../entities/user.entity';
 
 export class CreateAdminDetailsDto {
   @ApiProperty({ enum: AdminPosition, description: 'Admin position' })
@@ -54,7 +54,7 @@ export class CreateAdminDetailsDto {
   notes?: string;
 }
 
-export class CreateAdminDto {
+export class CreateAdminRequestDto {
   @ApiProperty({ description: 'User first name' })
   @IsString()
   @IsNotEmpty()

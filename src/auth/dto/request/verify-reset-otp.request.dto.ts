@@ -1,7 +1,7 @@
 import { IsEmail, IsString, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class VerifyResetOtpDto {
+export class VerifyResetOtpRequestDto {
   @ApiProperty({
     example: 'user@example.com',
     description: 'User email address',

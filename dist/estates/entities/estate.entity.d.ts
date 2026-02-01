@@ -1,4 +1,5 @@
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 export declare enum SubscriptionPlan {
     MONTHLY = "monthly",
     YEARLY = "yearly",
@@ -9,7 +10,11 @@ export declare enum SubscriptionStatus {
     EXPIRED = "expired",
     CANCELLED = "cancelled"
 }
-export declare class Estate extends Document {
+export declare class Estate extends Document implements SoftDeleteDocument {
+    isDeleted: boolean;
+    deletedAt?: Date;
+    softDelete: () => Promise<this>;
+    restore: () => Promise<this>;
     owner?: string;
     name: string;
     location: {

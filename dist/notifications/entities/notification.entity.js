@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationSchema = exports.Notification = exports.NotificationType = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
+const soft_delete_plugin_1 = require("../../common/database/soft-delete.plugin");
 var NotificationType;
 (function (NotificationType) {
     NotificationType["TOKEN_UPDATED"] = "token_updated";
@@ -21,6 +22,10 @@ var NotificationType;
     NotificationType["VERIFY_VISTOR"] = "verify_vistor";
 })(NotificationType || (exports.NotificationType = NotificationType = {}));
 let Notification = class Notification extends mongoose_2.Document {
+    isDeleted;
+    deletedAt;
+    softDelete;
+    restore;
     user;
     type;
     message;
@@ -57,4 +62,5 @@ exports.Notification = Notification = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Notification);
 exports.NotificationSchema = mongoose_1.SchemaFactory.createForClass(Notification);
+exports.NotificationSchema.plugin(soft_delete_plugin_1.softDeletePlugin);
 //# sourceMappingURL=notification.entity.js.map

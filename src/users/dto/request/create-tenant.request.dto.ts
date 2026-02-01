@@ -1,7 +1,7 @@
 import { IsString, IsEmail, IsNotEmpty, IsDateString, IsOptional, IsEnum, ValidateNested, IsMongoId, MaxLength, MinLength, Matches } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '../entities/user.entity';
+import { UserRole } from '../../entities/user.entity';
 
 export class CreateTenantDetailsDto {
   @ApiProperty({ description: 'MongoDB ObjectId of the landlord' })
@@ -32,7 +32,7 @@ export class CreateTenantDetailsDto {
   tenancyStatus?: string;
 }
 
-export class CreateTenantDto {
+export class CreateTenantRequestDto {
   @ApiProperty({ description: 'User first name' })
   @IsString()
   @IsNotEmpty()

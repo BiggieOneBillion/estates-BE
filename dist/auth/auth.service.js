@@ -21,20 +21,21 @@ const bcrypt = require("bcrypt");
 const mongoose_1 = require("@nestjs/mongoose");
 const user_entity_1 = require("../users/entities/user.entity");
 const mongoose_2 = require("mongoose");
-const mail_service_1 = require("../common/services/mail.service");
-const verify_login_response_dto_1 = require("./dto/verify-login-response.dto");
+const user_response_dto_1 = require("../users/dto/response/user.response.dto");
 const class_transformer_1 = require("class-transformer");
+const event_publisher_service_1 = require("../common/events/services/event-publisher.service");
+const user_events_1 = require("../common/events/domain/user-events");
 let AuthService = AuthService_1 = class AuthService {
     usersService;
     jwtService;
     userModel;
-    mailService;
+    eventPublisher;
     logger = new common_1.Logger(AuthService_1.name);
-    constructor(usersService, jwtService, userModel, mailService) {
+    constructor(usersService, jwtService, userModel, eventPublisher) {
         this.usersService = usersService;
         this.jwtService = jwtService;
         this.userModel = userModel;
-        this.mailService = mailService;
+        this.eventPublisher = eventPublisher;
     }
     async validateUser(email, password, isMobile) {
         const user = await this.usersService.findByEmail(email);
@@ -62,7 +63,17 @@ let AuthService = AuthService_1 = class AuthService {
                 reason: 'unverified_email',
                 version: user.tokenVersion,
             };
-            await this.mailService.sendVerificationEmail(user.email, user.verificationToken, `${user.firstName} ${user.lastName}`);
+            const session = await this.userModel.db.startSession();
+            await session.withTransaction(async () => {
+                const event = new user_events_1.UserVerificationEmailRequestedEvent({
+                    userId: user._id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    verificationToken: user.verificationToken,
+                });
+                await this.eventPublisher.publish(event, session);
+            });
             return {
                 status: 222,
                 message: 'Email not verified',
@@ -82,9 +93,20 @@ let AuthService = AuthService_1 = class AuthService {
                 reason: 'active_on_another_device',
                 version: user.tokenVersion,
             };
-            await this.mailService.sendVerificationEmail(user.email, verificationToken, `${user.firstName} ${user.lastName}`);
-            user.verificationToken = verificationToken;
-            await user.save();
+            const session = await this.userModel.db.startSession();
+            await session.withTransaction(async () => {
+                user.verificationToken = verificationToken;
+                await user.save({ session });
+                const event = new user_events_1.UserLoggedInEvent({
+                    userId: user._id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    verificationToken,
+                    deviceInfo: 'active_on_another_device',
+                });
+                await this.eventPublisher.publish(event, session);
+            });
             return {
                 status: 222,
                 message: 'User logged in on another device',
@@ -93,8 +115,19 @@ let AuthService = AuthService_1 = class AuthService {
                 access_token: this.jwtService.sign(payload),
             };
         }
-        user.verificationToken = verificationToken;
-        await user.save();
+        const session = await this.userModel.db.startSession();
+        await session.withTransaction(async () => {
+            user.verificationToken = verificationToken;
+            await user.save({ session });
+            const event = new user_events_1.UserLoggedInEvent({
+                userId: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                verificationToken,
+            });
+            await this.eventPublisher.publish(event, session);
+        });
         console.log('Login Verification token---', verificationToken);
         const userObject = user.toObject();
         delete userObject.password;
@@ -132,8 +165,9 @@ let AuthService = AuthService_1 = class AuthService {
             type: 'auth',
             isVerified: true,
             version: user.tokenVersion,
+            estate: user?.estateId?.toString(),
         };
-        const userInstance = (0, class_transformer_1.plainToInstance)(verify_login_response_dto_1.UserResponseDto, user, {
+        const userInstance = (0, class_transformer_1.plainToInstance)(user_response_dto_1.UserResponseDto, user, {
             excludeExtraneousValues: true,
         });
         return {
@@ -154,9 +188,22 @@ let AuthService = AuthService_1 = class AuthService {
             password: hashedPassword,
             verificationToken,
         });
-        const savedUser = await newUser.save();
-        this.logger.log(`New user registered: ${savedUser.email}`);
-        await this.mailService.sendVerificationEmail(registerDto.email, verificationToken, `${registerDto.firstName} ${registerDto.lastName}`);
+        const session = await this.userModel.db.startSession();
+        let savedUser;
+        await session.withTransaction(async () => {
+            savedUser = await newUser.save({ session });
+            this.logger.log(`New user registered: ${savedUser.email}`);
+            this.logger.log(`New user registered email token: ${verificationToken}`);
+            const event = new user_events_1.UserCreatedEvent({
+                userId: savedUser._id,
+                email: savedUser.email,
+                firstName: savedUser.firstName,
+                lastName: savedUser.lastName,
+                role: savedUser.primaryRole,
+                verificationToken,
+            });
+            await this.eventPublisher.publish(event, session);
+        });
         const resObj = {
             firstName: savedUser.firstName,
             lastName: savedUser.lastName,
@@ -181,7 +228,6 @@ let AuthService = AuthService_1 = class AuthService {
             type: 'auth',
             isVerified: false,
             version: 0,
-            estate: user.estate,
         };
         return {
             access_token: this.jwtService.sign(payload),
@@ -231,7 +277,14 @@ let AuthService = AuthService_1 = class AuthService {
         }
         else if (payload.reason === 'active_on_another_device') {
             user.tokenVersion += 1;
-            await this.mailService.sendBasicEmail(user.email, 'Security Alert: New Device Login', `Hello ${user.firstName}, you have successfully switched your active session to a new device. Previous sessions have been logged out for your security.`);
+            const event = new user_events_1.UserSecurityAlertEvent({
+                userId: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                alertType: 'device_switch',
+                details: 'you have successfully switched your active session to a new device. Previous sessions have been logged out for your security.',
+            });
+            await this.eventPublisher.publish(event);
         }
         user.isActive = true;
         user.lastLogin = new Date();
@@ -244,8 +297,9 @@ let AuthService = AuthService_1 = class AuthService {
             type: 'auth',
             isVerified: true,
             version: user.tokenVersion,
+            estate: user?.estateId?.toString(),
         };
-        const userInstance = (0, class_transformer_1.plainToInstance)(verify_login_response_dto_1.UserResponseDto, user, {
+        const userInstance = (0, class_transformer_1.plainToInstance)(user_response_dto_1.UserResponseDto, user, {
             excludeExtraneousValues: true,
         });
         return {
@@ -259,10 +313,19 @@ let AuthService = AuthService_1 = class AuthService {
             throw new common_1.BadRequestException('No account found with this email');
         }
         const resetOTP = Math.floor(100000 + Math.random() * 900000).toString();
-        user.passwordResetToken = resetOTP;
-        user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
-        await user.save();
-        await this.mailService.sendPasswordResetEmail(email, resetOTP, `${user.firstName} ${user.lastName}`);
+        const session = await this.userModel.db.startSession();
+        await session.withTransaction(async () => {
+            user.passwordResetToken = resetOTP;
+            user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+            await user.save({ session });
+            const event = new user_events_1.UserPasswordResetRequestedEvent({
+                userId: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                resetToken: resetOTP,
+            });
+        });
         return { message: 'Password reset OTP has been sent to your email' };
     }
     async verifyPasswordResetOTP(email, otp) {
@@ -309,6 +372,17 @@ let AuthService = AuthService_1 = class AuthService {
             throw error;
         }
     }
+    async logout(userId) {
+        const user = await this.userModel.findById(userId);
+        if (!user) {
+            throw new common_1.BadRequestException('User not found');
+        }
+        user.isActive = false;
+        user.tokenVersion += 1;
+        await user.save();
+        this.logger.log(`User logged out: ${user.email}`);
+        return { message: 'Logout successful' };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = AuthService_1 = __decorate([
@@ -317,6 +391,6 @@ exports.AuthService = AuthService = AuthService_1 = __decorate([
     __metadata("design:paramtypes", [users_service_1.UsersService,
         jwt_1.JwtService,
         mongoose_2.Model,
-        mail_service_1.MailService])
+        event_publisher_service_1.EventPublisher])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

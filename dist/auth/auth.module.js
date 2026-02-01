@@ -18,6 +18,7 @@ const jwt_strategy_1 = require("./strategies/jwt.strategy");
 const mongoose_1 = require("@nestjs/mongoose");
 const user_entity_1 = require("../users/entities/user.entity");
 const mail_service_1 = require("../common/services/mail.service");
+const events_infrastructure_module_1 = require("../common/events/events-infrastructure.module");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -35,6 +36,7 @@ exports.AuthModule = AuthModule = __decorate([
                 }),
             }),
             mongoose_1.MongooseModule.forFeature([{ name: user_entity_1.User.name, schema: user_entity_1.UserSchema }]),
+            events_infrastructure_module_1.EventsInfrastructureModule,
         ],
         controllers: [auth_controller_1.AuthController],
         providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy, mail_service_1.MailService],

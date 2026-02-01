@@ -11,9 +11,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
+const core_1 = require("@nestjs/core");
 const event_emitter_1 = require("@nestjs/event-emitter");
 const throttler_1 = require("@nestjs/throttler");
 const schedule_1 = require("@nestjs/schedule");
+const bull_1 = require("@nestjs/bull");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const auth_module_1 = require("./auth/auth.module");
@@ -35,6 +37,9 @@ const events_module_1 = require("./events/events.module");
 const levies_module_1 = require("./levies/levies.module");
 const payments_module_1 = require("./payments/payments.module");
 const compliance_module_1 = require("./compliance/compliance.module");
+const events_infrastructure_module_1 = require("./common/events/events-infrastructure.module");
+const audit_logs_module_1 = require("./audit-logs/audit-logs.module");
+const audit_interceptor_1 = require("./common/interceptors/audit.interceptor");
 let AppModule = class AppModule {
     initialSeedService;
     constructor(initialSeedService) {
@@ -64,6 +69,16 @@ exports.AppModule = AppModule = __decorate([
                     ttl: 60000,
                     limit: 10,
                 }]),
+            bull_1.BullModule.forRootAsync({
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: async (configService) => ({
+                    redis: {
+                        host: configService.get('REDIS_HOST', 'localhost'),
+                        port: configService.get('REDIS_PORT', 6379),
+                    },
+                }),
+            }),
             mongoose_1.MongooseModule.forRootAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
@@ -76,6 +91,7 @@ exports.AppModule = AppModule = __decorate([
                 { name: user_entity_1.User.name, schema: user_entity_1.UserSchema },
                 { name: estate_entity_1.Estate.name, schema: estate_entity_1.EstateSchema },
             ]),
+            events_infrastructure_module_1.EventsInfrastructureModule,
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
             estates_module_1.EstatesModule,
@@ -87,9 +103,18 @@ exports.AppModule = AppModule = __decorate([
             levies_module_1.LeviesModule,
             payments_module_1.PaymentsModule,
             compliance_module_1.ComplianceModule,
+            audit_logs_module_1.AuditLogsModule,
         ],
         controllers: [app_controller_1.AppController],
-        providers: [app_service_1.AppService, initial_seeds_1.InitialSeedService, mail_service_1.MailService],
+        providers: [
+            app_service_1.AppService,
+            initial_seeds_1.InitialSeedService,
+            mail_service_1.MailService,
+            {
+                provide: core_1.APP_INTERCEPTOR,
+                useClass: audit_interceptor_1.AuditInterceptor,
+            },
+        ],
     }),
     __metadata("design:paramtypes", [initial_seeds_1.InitialSeedService])
 ], AppModule);

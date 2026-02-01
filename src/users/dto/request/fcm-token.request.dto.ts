@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
-export class RegisterFcmTokenDto {
+export class RegisterFcmTokenRequestDto {
   @IsString()
   @IsNotEmpty()
   fcmToken: string;
@@ -10,7 +10,7 @@ export class RegisterFcmTokenDto {
   deviceId?: string; // Optional device identifier
 }
 
-export class UpdateNotificationPreferencesDto {
+export class UpdateNotificationPreferencesRequestDto {
   @IsOptional()
   email?: boolean;
 

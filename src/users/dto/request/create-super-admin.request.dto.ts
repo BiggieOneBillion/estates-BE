@@ -1,10 +1,10 @@
 import { IsString, IsEmail, IsNotEmpty, IsOptional, IsEnum, ValidateNested, MinLength, MaxLength, Matches } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '../entities/user.entity';
-import { CreateAdminDetailsDto } from './create-admin.dto';
+import { UserRole } from '../../entities/user.entity';
+import { CreateAdminDetailsDto } from './create-admin.request.dto';
 
-export class CreateSuperAdminDto {
+export class CreateSuperAdminRequestDto {
   @ApiProperty({ description: 'User first name' })
   @IsString()
   @IsNotEmpty()

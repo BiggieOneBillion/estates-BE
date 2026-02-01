@@ -20,8 +20,8 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserRequestDto } from './dto/request/create-user.request.dto';
+import { UpdateUserRequestDto } from './dto/request/update-user.request.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import {
@@ -35,16 +35,16 @@ import {
 import { Roles } from 'src/auth/decorators/role.decorator';
 import { generateStrongPassword } from 'src/common/utils/util-fn';
 import { UserManagementService } from './user-management.service';
-import { RegisterFcmTokenDto, UpdateNotificationPreferencesDto } from './dto/fcm-token.dto';
-import { CreateLandlordDto } from './dto/create-landlord.dto';
-import { CreateSecurityDto } from './dto/create-security.dto';
-import { CreateTenantDto } from './dto/create-tenant.dto';
-import { CreateAdminDto, CreateAdminDetailsDto } from './dto/create-admin.dto';
-import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UpdatePermissionsDto } from './dto/update-permissions.dto';
+import { RegisterFcmTokenRequestDto, UpdateNotificationPreferencesRequestDto } from './dto/request/fcm-token.request.dto';
+import { CreateLandlordRequestDto } from './dto/request/create-landlord.request.dto';
+import { CreateSecurityRequestDto } from './dto/request/create-security.request.dto';
+import { CreateTenantRequestDto } from './dto/request/create-tenant.request.dto';
+import { CreateAdminRequestDto, CreateAdminDetailsDto } from './dto/request/create-admin.request.dto';
+import { CreateSuperAdminRequestDto } from './dto/request/create-super-admin.request.dto';
+import { UpdateProfileRequestDto } from './dto/request/update-profile.request.dto';
+import { UpdatePermissionsRequestDto } from './dto/request/update-permissions.request.dto';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
-import { UserResponseDto } from 'src/auth/dto/verify-login-response.dto';
+import { UserResponseDto } from './dto/response/user.response.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { RequirePermission } from 'src/auth/decorators/permissions.decorator';
 import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
@@ -70,7 +70,7 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @RequirePermission(ResourceType.ADMINS, PermissionAction.CREATE)
   async createAdmins(
-    @Body() createAdminDto: CreateAdminDto,
+    @Body() createAdminDto: CreateAdminRequestDto,
     @CurrentUser() user: any,
   ) {
     if (createAdminDto.primaryRole !== UserRole.ADMIN) {
@@ -102,7 +102,7 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @RequirePermission(ResourceType.LANDLORDS, PermissionAction.CREATE)
   async createLandLord(
-    @Body() createLandlordDto: CreateLandlordDto,
+    @Body() createLandlordDto: CreateLandlordRequestDto,
     @CurrentUser('userId') userId: string,
   ) {
     if (createLandlordDto.primaryRole !== UserRole.LANDLORD) {
@@ -130,7 +130,7 @@ export class UsersController {
   @Post('create/tenant')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LANDLORD)
   async createTenant(
-    @Body() createTenantDto: CreateTenantDto,
+    @Body() createTenantDto: CreateTenantRequestDto,
     @CurrentUser('userId') userId: string,
   ) {
     if (createTenantDto.primaryRole !== UserRole.TENANT) {
@@ -168,7 +168,7 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @RequirePermission(ResourceType.USERS, PermissionAction.CREATE)
   async createSecurity(
-    @Body() createSecurityDto: CreateSecurityDto,
+    @Body() createSecurityDto: CreateSecurityRequestDto,
     @CurrentUser('userId') userId: string,
   ) {
     return this.userManagement.createSecurity(
@@ -287,7 +287,7 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   update(
     @Param('id') id: string,
-    @Body() updateUserDto: UpdateUserDto,
+    @Body() updateUserDto: UpdateUserRequestDto,
     @Request() req,
   ) {
     if (
@@ -322,7 +322,7 @@ export class UsersController {
   @Patch(':id')
   userUpdateOwnProfile(
     @Param('id') id: string,
-    @Body() updateProfileDto: UpdateProfileDto,
+    @Body() updateProfileDto: UpdateProfileRequestDto,
     @CurrentUser('userId') currentUserId: string,
   ) {
     if (id === currentUserId) {
@@ -341,7 +341,7 @@ export class UsersController {
   @RequirePermission(ResourceType.USERS, PermissionAction.UPDATE)
   async editUser(
     @Param('id') id: string,
-    @Body() updateUserDto: UpdateUserDto,
+    @Body() updateUserDto: UpdateUserRequestDto,
     @CurrentUser() currentUser: any,
   ) {
     const userToUpdate = await this.usersService.findOne(id);
@@ -413,7 +413,7 @@ export class UsersController {
   @RequirePermission(ResourceType.ADMINS, PermissionAction.MANAGE)
   async updatePermissions(
     @Param('userId') userId: string,
-    @Body() updatePermissionsDto: UpdatePermissionsDto,
+    @Body() updatePermissionsDto: UpdatePermissionsRequestDto,
     @CurrentUser() currentUser: any,
   ) {
     const userToUpdate = await this.usersService.findOne(userId);
@@ -499,7 +499,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'FCM token registered successfully' })
   @Post('fcm-token')
   async registerFcmToken(
-    @Body() registerFcmTokenDto: RegisterFcmTokenDto,
+    @Body() registerFcmTokenDto: RegisterFcmTokenRequestDto,
     @CurrentUser('userId') userId: string,
   ) {
     return this.usersService.registerFcmToken(userId, registerFcmTokenDto.fcmToken);
@@ -525,7 +525,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Notification preferences updated successfully' })
   @Patch('notification-preferences')
   async updateNotificationPreferences(
-    @Body() updatePreferencesDto: UpdateNotificationPreferencesDto,
+    @Body() updatePreferencesDto: UpdateNotificationPreferencesRequestDto,
     @CurrentUser('userId') userId: string,
   ) {
     return this.usersService.updateNotificationPreferences(userId, updatePreferencesDto);

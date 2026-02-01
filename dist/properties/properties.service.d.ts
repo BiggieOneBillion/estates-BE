@@ -1,10 +1,10 @@
-import { Model } from 'mongoose';
+import { SoftDeleteModel } from 'src/common/database/soft-delete.plugin';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { Property } from './entities/property.entity';
 export declare class PropertiesService {
     private readonly propertyModel;
-    constructor(propertyModel: Model<Property>);
+    constructor(propertyModel: SoftDeleteModel<Property>);
     create(createPropertyDto: CreatePropertyDto): Promise<Property>;
     findAll(): Promise<Property[]>;
     findByEstate(estateId: string): Promise<Property[]>;
