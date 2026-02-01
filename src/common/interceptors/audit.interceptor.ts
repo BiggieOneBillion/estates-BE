@@ -23,8 +23,9 @@ export class AuditInterceptor implements NestInterceptor {
     // Only audit mutations (POST, PUT, DELETE, PATCH)
     const isMutation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
     
-    // Skip auditing the login/register paths to avoid logging passwords (or handle them carefully)
-    const isSensitive = url.includes('auth/login') || url.includes('auth/register');
+    // Skip auditing the login/register paths to avoid logging passwords
+    const sensitiveEndpoints = ['/auth/login', '/auth/register', '/auth/verify-login'];
+    const isSensitive = sensitiveEndpoints.some(endpoint => url.includes(endpoint));
 
     return next.handle().pipe(
       tap({

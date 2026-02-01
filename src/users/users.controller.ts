@@ -240,11 +240,12 @@ export class UsersController {
   @Get('all')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @RequirePermission(ResourceType.USERS, PermissionAction.READ)
-  async findAll(@CurrentUser('estate') estate: any) {
-    if (!estate?._id) {
+  async findAll(@CurrentUser('estate') estate: string) {
+    console.log({estate});
+    if (!estate) {
       throw new ForbiddenException('You must belong to an estate');
     }
-    return this.usersService.findByEstate(estate._id.toString());
+    return this.usersService.findByEstate(estate.toString());
   }
 
   @ApiOperation({

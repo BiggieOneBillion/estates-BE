@@ -41,7 +41,9 @@ export class UsersService {
   }
 
   async findByEstate(estateId: string): Promise<UserResponseDto[]> {
-    const users = await this.userModel.find({ estateId });
+    console.log({estateId});
+    const users = await this.userModel.find({ estateId: estateId });
+    console.log({users});
 
     if (!users) {
       throw new NotFoundException(`No users found for estate ${estateId}`);

@@ -15,7 +15,7 @@ export enum AuditAction {
 
 @Schema({ timestamps: true })
 export class AuditLog extends Document {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', index: true })
+  @Prop({ type: MongooseSchema.Types.Mixed, ref: 'User', index: true })
   userId: MongooseSchema.Types.ObjectId | string;
 
   @Prop({ required: true, index: true })

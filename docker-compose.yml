@@ -7,6 +7,8 @@ services:
       - NODE_ENV=production
       - MONGODB_URI=mongodb://mongodb:27017/estate-management
       - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
@@ -20,7 +22,7 @@ services:
   mongodb:
     image: mongodb/mongodb-community-server:latest
     ports:
-      - "27017:27017"
+      - "27018:27017"
     command: ["--replSet", "rs0", "--bind_ip_all"]
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongodb:27017' }] }).ok }"]
@@ -36,7 +38,7 @@ services:
   redis:
     image: redis:latest
     ports:
-      - "6379:6379"
+      - "6380:6379"
     networks:
       - estate-net
 
@@ -69,6 +71,8 @@ services:
     image: jaegertracing/all-in-one:latest
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "4318:4318" # OTLP HTTP
     networks:
       - estate-net
     # Port 16686 is NOT exposed directly, will be proxied via Nginx with Auth
