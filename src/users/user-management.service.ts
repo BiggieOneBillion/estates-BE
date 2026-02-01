@@ -30,10 +30,10 @@ export class UserManagementService {
   ) {}
 
   /**
-   * Create a new admin user (only by super_admin)
+   * Create a new admin user
    */
   async createAdmin(
-    superAdminId: string,
+    requesterId: string,
     adminData: {
       firstName: string;
       lastName: string;
@@ -45,13 +45,18 @@ export class UserManagementService {
       additionalPermissions?: Permission[];
       existingLandlordId?: string; // If promoting existing landlord
     },
-    estateId: string,
   ): Promise<User> {
-    // Verify the creator is a super_admin
-    const creator = await this.userModel.findById(superAdminId);
-    if (!creator || creator.primaryRole !== UserRole.SUPER_ADMIN) {
-      throw new ForbiddenException('Only super admins can create admin users');
+    // 1. Fetch requester and validate estate
+    const requester = await this.userModel.findById(requesterId);
+    if (!requester) {
+      throw new ForbiddenException('Requester not found');
     }
+
+    if (!requester.estateId && requester.primaryRole !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Requester must belong to an estate');
+    }
+
+    const estateId = requester.estateId?.toString();
 
     let newAdmin: User;
 
@@ -80,13 +85,13 @@ export class UserManagementService {
             ),
             additionalPermissions: adminData.additionalPermissions || [],
             appointedAt: new Date(),
-            appointedBy: superAdminId,
+            appointedBy: requesterId,
           },
           $push: {
             roleHistory: {
               fromRole: UserRole.LANDLORD,
               toRole: UserRole.ADMIN,
-              changedBy: superAdminId,
+              changedBy: requesterId,
               changedAt: new Date(),
               reason: `Promoted to ${adminData.position}`,
             },
@@ -116,11 +121,11 @@ export class UserManagementService {
           positionPermissions: this.getPositionPermissions(adminData.position),
           additionalPermissions: adminData.additionalPermissions || [],
           appointedAt: new Date(),
-          appointedBy: superAdminId,
+          appointedBy: requesterId,
         },
         hierarchy: {
-          createdBy: superAdminId,
-          reportsTo: superAdminId,
+          createdBy: requesterId,
+          reportsTo: requesterId,
           manages: [],
           relationshipEstablishedAt: new Date(),
         },
@@ -142,7 +147,7 @@ export class UserManagementService {
     }
 
     // Update super admin's managed users
-    await this.userModel.findByIdAndUpdate(superAdminId, {
+    await this.userModel.findByIdAndUpdate(requesterId, {
       $addToSet: { 'hierarchy.manages': newAdmin._id },
     });
 
@@ -153,7 +158,7 @@ export class UserManagementService {
    * Create a new landlord (by super_admin or authorized admin)
    */
   async createLandlord(
-    creatorId: string,
+    requesterId: string,
     landlordData: {
       firstName: string;
       lastName: string;
@@ -162,25 +167,13 @@ export class UserManagementService {
       ownedProperties?: string[];
       canCreateTenants?: boolean;
     },
-    estateId: string,
   ): Promise<User> {
-    const creator = await this.userModel.findById(creatorId);
-
-    // Check if creator has permission
-    if (!creator) {
-      throw new BadRequestException('Invalid creator ID');
+    const requester = await this.userModel.findById(requesterId);
+    if (!requester || !requester.estateId) {
+      throw new ForbiddenException('Requester must belong to an estate');
     }
 
-    const canCreateLandlord =
-      creator.primaryRole === UserRole.SUPER_ADMIN ||
-      (creator.primaryRole === UserRole.ADMIN &&
-        this.hasPermission(creator, 'landlords', 'create'));
-
-    if (!canCreateLandlord) {
-      throw new ForbiddenException(
-        'Insufficient permissions to create landlord',
-      );
-    }
+    const estateId = requester.estateId.toString();
 
     const password = this.generateTemporaryPassword();
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -200,8 +193,8 @@ export class UserManagementService {
         isEligibleForAdmin: true,
       },
       hierarchy: {
-        createdBy: creatorId,
-        reportsTo: creatorId,
+        createdBy: requesterId,
+        reportsTo: requesterId,
         manages: [],
         relationshipEstablishedAt: new Date(),
       },
@@ -211,7 +204,7 @@ export class UserManagementService {
     await newLandlord.save();
 
     // Update creator's managed users
-    await this.userModel.findByIdAndUpdate(creatorId, {
+    await this.userModel.findByIdAndUpdate(requesterId, {
       $addToSet: { 'hierarchy.manages': newLandlord._id },
     });
 
@@ -243,13 +236,14 @@ export class UserManagementService {
       leaseStartDate?: Date;
       leaseEndDate?: Date;
     },
-    estateId: string,
   ): Promise<User> {
     const landlord = await this.userModel.findById(landlordId);
 
-    if (!landlord) {
-      throw new BadRequestException('Landlord not found');
+    if (!landlord || !landlord.estateId) {
+      throw new BadRequestException('Landlord not found or doesn\'t belong to an estate');
     }
+    
+    const estateId = landlord.estateId.toString();
 
     // Check permissions (only landlord themselves or admins)
     if (landlord.primaryRole === UserRole.LANDLORD && !landlord.landlordDetails?.canCreateTenants) {
@@ -313,23 +307,14 @@ export class UserManagementService {
    * Create a generic user (by Super Admin or Admin)
    */
   async createUser(
-    creatorId: string,
+    requesterId: string,
     userData: CreateUserDto,
-    estateId: string,
   ): Promise<User> {
-    const creator = await this.userModel.findById(creatorId);
-    if (!creator) {
-      throw new BadRequestException('Invalid creator ID');
+    const requester = await this.userModel.findById(requesterId);
+    if (!requester || !requester.estateId) {
+      throw new BadRequestException('Requester not found or doesn\'t belong to an estate');
     }
-
-    const canCreateUser =
-      creator.primaryRole === UserRole.SUPER_ADMIN ||
-      (creator.primaryRole === UserRole.ADMIN &&
-        this.hasPermission(creator, 'users', 'create'));
-
-    if (!canCreateUser) {
-      throw new ForbiddenException('Insufficient permissions to create user');
-    }
+    const estateId = requester.estateId.toString();
 
     // Check if user already exists
     const existingUser = await this.userModel.findOne({ email: userData.email });
@@ -345,8 +330,8 @@ export class UserManagementService {
       password: hashedPassword,
       estateId,
       hierarchy: {
-        createdBy: creatorId,
-        reportsTo: creatorId,
+        createdBy: requesterId,
+        reportsTo: requesterId,
         manages: [],
         relationshipEstablishedAt: new Date(),
       },
@@ -356,7 +341,7 @@ export class UserManagementService {
     await newUser.save();
 
     // Update creator's managed users
-    await this.userModel.findByIdAndUpdate(creatorId, {
+    await this.userModel.findByIdAndUpdate(requesterId, {
       $addToSet: { 'hierarchy.manages': newUser._id },
     });
 
@@ -381,15 +366,20 @@ export class UserManagementService {
   }
 
   async createSecurity(
-    creatorId: string,
+    requesterId: string,
     securityData: {
       firstName: string;
       lastName: string;
       email: string;
       phone: string;
     },
-    estateId: string,
   ): Promise<User> {
+    const requester = await this.userModel.findById(requesterId);
+    if (!requester || !requester.estateId) {
+      throw new BadRequestException('Requester not found or doesn\'t belong to an estate');
+    }
+    const estateId = requester.estateId.toString();
+
     const isSecurityAlready = await this.userModel.findOne({
       primaryRole: UserRole.SECURITY,
       estateId,
@@ -397,20 +387,6 @@ export class UserManagementService {
 
     if (isSecurityAlready) {
       throw new BadRequestException('Security already exists for this estate');
-    }
-
-    const creator = await this.userModel.findById(creatorId);
-    if (!creator) {
-      throw new BadRequestException('Invalid creator ID');
-    }
-
-    const canCreateSecurity =
-      creator.primaryRole === UserRole.SUPER_ADMIN ||
-      (creator.primaryRole === UserRole.ADMIN &&
-        this.hasPermission(creator, 'security', 'create'));
-
-    if (!canCreateSecurity) {
-      throw new ForbiddenException('Insufficient permissions to create security');
     }
 
     const password = this.generateTemporaryPassword();
@@ -425,11 +401,11 @@ export class UserManagementService {
       primaryRole: UserRole.SECURITY,
       estateId,
       securityDetails: {
-        supervisorId: creatorId,
+        supervisorId: requesterId,
       },
       hierarchy: {
-        createdBy: creatorId,
-        reportsTo: creatorId,
+        createdBy: requesterId,
+        reportsTo: requesterId,
         manages: [],
         relationshipEstablishedAt: new Date(),
       },
@@ -439,7 +415,7 @@ export class UserManagementService {
     await newSecurity.save();
 
     // Update creator's managed users
-    await this.userModel.findByIdAndUpdate(creatorId, {
+    await this.userModel.findByIdAndUpdate(requesterId, {
       $addToSet: { 'hierarchy.manages': newSecurity._id },
     });
 
