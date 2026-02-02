@@ -1,4 +1,4 @@
-import { Model } from 'mongoose';
+import { SoftDeleteModel } from 'src/common/database/soft-delete.plugin';
 import { CreateTokenDto } from './dto/create-token.dto';
 import { UpdateTokenDto } from './dto/update-token.dto';
 import { Token } from './entities/token.entity';
@@ -11,7 +11,7 @@ export declare class TokenService {
     private readonly userService;
     private readonly complianceService;
     private readonly logger;
-    constructor(tokenModel: Model<Token>, eventEmitter: EventEmitter2, userService: UsersService, complianceService: ComplianceService);
+    constructor(tokenModel: SoftDeleteModel<Token>, eventEmitter: EventEmitter2, userService: UsersService, complianceService: ComplianceService);
     create(createTokenDto: CreateTokenDto, userId: string): Promise<Token>;
     verifyVisitorToken(tokenString: string, userId: string): Promise<Token>;
     findAll(): Promise<Token[]>;

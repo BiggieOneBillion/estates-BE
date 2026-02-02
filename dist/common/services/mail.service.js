@@ -18,9 +18,11 @@ let MailService = class MailService {
     transporter;
     constructor(configService) {
         this.configService = configService;
+    }
+    async onModuleInit() {
         const isDev = this.configService.get('NODE_ENV') !== 'production';
         if (isDev) {
-            this.createDevTransport();
+            await this.createDevTransport();
         }
         else {
             this.transporter = nodemailer.createTransport({

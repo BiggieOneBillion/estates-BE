@@ -1,4 +1,5 @@
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 export declare enum NotificationType {
     TOKEN_UPDATED = "token_updated",
     TOKEN_VERIFIED = "token_verified",
@@ -6,7 +7,11 @@ export declare enum NotificationType {
     VISITOR_VERIFIED = "visitor_verified",
     VERIFY_VISTOR = "verify_vistor"
 }
-export declare class Notification extends Document {
+export declare class Notification extends Document implements SoftDeleteDocument {
+    isDeleted: boolean;
+    deletedAt?: Date;
+    softDelete: () => Promise<this>;
+    restore: () => Promise<this>;
     user: string;
     type: NotificationType;
     message: string;

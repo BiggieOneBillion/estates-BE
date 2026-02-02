@@ -1,31 +1,32 @@
 import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserRequestDto } from './dto/request/update-user.request.dto';
 import { User } from './entities/user.entity';
 import { UserManagementService } from './user-management.service';
-import { RegisterFcmTokenDto, UpdateNotificationPreferencesDto } from './dto/fcm-token.dto';
-import { CreateLandlordDto } from './dto/create-landlord.dto';
-import { CreateSecurityDto } from './dto/create-security.dto';
-import { CreateTenantDto } from './dto/create-tenant.dto';
-import { CreateAdminDto, CreateAdminDetailsDto } from './dto/create-admin.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UpdatePermissionsDto } from './dto/update-permissions.dto';
+import { RegisterFcmTokenRequestDto, UpdateNotificationPreferencesRequestDto } from './dto/request/fcm-token.request.dto';
+import { CreateLandlordRequestDto } from './dto/request/create-landlord.request.dto';
+import { CreateSecurityRequestDto } from './dto/request/create-security.request.dto';
+import { CreateTenantRequestDto } from './dto/request/create-tenant.request.dto';
+import { CreateAdminRequestDto, CreateAdminDetailsDto } from './dto/request/create-admin.request.dto';
+import { UpdateProfileRequestDto } from './dto/request/update-profile.request.dto';
+import { UpdatePermissionsRequestDto } from './dto/request/update-permissions.request.dto';
+import { UserResponseDto } from './dto/response/user.response.dto';
 export declare class UsersController {
     private readonly usersService;
     private readonly userManagement;
     constructor(usersService: UsersService, userManagement: UserManagementService);
-    createAdmins(createAdminDto: CreateAdminDto, req: any): Promise<User>;
-    createLandLord(createLandlordDto: CreateLandlordDto, req: any): Promise<User>;
-    createTenant(createTenantDto: CreateTenantDto, req: any): Promise<User>;
-    createSecurity(createSecurityDto: CreateSecurityDto, req: any): Promise<User>;
-    findAll(req: any): Promise<User[]>;
-    findOne(id: string, req: any): Promise<User>;
-    update(id: string, updateUserDto: UpdateUserDto, req: any): Promise<User>;
-    userUpdateOwnProfile(id: string, updateProfileDto: UpdateProfileDto, req: any): Promise<User>;
-    editUser(id: string, updateUserDto: UpdateUserDto, req: any): Promise<User>;
-    updateUserToAdmin(id: string, req: any, body: CreateAdminDetailsDto): Promise<User>;
-    demoteAdminToLandlord(id: string, req: any): Promise<User>;
-    remove(id: string): Promise<void>;
-    updatePermissions(updatePermissionsDto: UpdatePermissionsDto, req: any): Promise<User>;
+    createAdmins(createAdminDto: CreateAdminRequestDto, user: any): Promise<User>;
+    createLandLord(createLandlordDto: CreateLandlordRequestDto, userId: string): Promise<User>;
+    createTenant(createTenantDto: CreateTenantRequestDto, userId: string): Promise<User>;
+    createSecurity(createSecurityDto: CreateSecurityRequestDto, userId: string): Promise<User>;
+    findAll(estate: string): Promise<UserResponseDto[]>;
+    findOne(id: string, currentUser: any): Promise<User>;
+    update(id: string, updateUserDto: UpdateUserRequestDto, req: any): Promise<User>;
+    userUpdateOwnProfile(id: string, updateProfileDto: UpdateProfileRequestDto, currentUserId: string): Promise<User>;
+    editUser(id: string, updateUserDto: UpdateUserRequestDto, currentUser: any): Promise<User>;
+    updateUserToAdmin(id: string, currentUserId: string, body: CreateAdminDetailsDto): Promise<User>;
+    demoteAdminToLandlord(id: string, currentUserId: string): Promise<User>;
+    remove(id: string, currentUser: any): Promise<void>;
+    updatePermissions(userId: string, updatePermissionsDto: UpdatePermissionsRequestDto, currentUser: any): Promise<User>;
     disableTokenGeneration(id: string, req: any): Promise<{
         message: string;
         user: (import("mongoose").Document<unknown, {}, User> & User & Required<{
@@ -42,10 +43,10 @@ export declare class UsersController {
             __v: number;
         }) | null;
     }>;
-    registerFcmToken(registerFcmTokenDto: RegisterFcmTokenDto, req: any): Promise<User>;
-    removeFcmToken(token: string, req: any): Promise<User>;
-    updateNotificationPreferences(updatePreferencesDto: UpdateNotificationPreferencesDto, req: any): Promise<User>;
-    getNotificationPreferences(req: any): Promise<{
+    registerFcmToken(registerFcmTokenDto: RegisterFcmTokenRequestDto, userId: string): Promise<User>;
+    removeFcmToken(token: string, userId: string): Promise<User>;
+    updateNotificationPreferences(updatePreferencesDto: UpdateNotificationPreferencesRequestDto, userId: string): Promise<User>;
+    getNotificationPreferences(userId: string): Promise<{
         preferences: {
             email: boolean;
             push: boolean;

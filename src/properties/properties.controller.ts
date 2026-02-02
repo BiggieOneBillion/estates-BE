@@ -17,6 +17,12 @@ import {
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CreatePropertyCommand } from './cqrs/commands/impl/create-property.command';
+import { UpdatePropertyCommand } from './cqrs/commands/impl/update-property.command';
+import { DeletePropertyCommand } from './cqrs/commands/impl/delete-property.command';
+import { FindAllPropertiesQuery } from './cqrs/queries/impl/find-all-properties.query';
+import { FindPropertyByIdQuery } from './cqrs/queries/impl/find-property-by-id.query';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from 'src/users/entities/user.entity';
@@ -28,7 +34,10 @@ import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 @Controller('properties')
 @UseGuards(JwtAuthGuard, VerifiedGuard)
 export class PropertiesController {
-  constructor(private readonly propertiesService: PropertiesService) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
 
   @ApiOperation({
     summary: 'Create a new property',
@@ -39,7 +48,7 @@ export class PropertiesController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LANDLORD)
   create(@Body() createPropertyDto: CreatePropertyDto) {
-    return this.propertiesService.create(createPropertyDto);
+    return this.commandBus.execute(new CreatePropertyCommand(createPropertyDto));
   }
 
   @ApiOperation({
@@ -49,7 +58,7 @@ export class PropertiesController {
   @ApiResponse({ status: 200, description: 'List of all properties' })
   @Get()
   findAll() {
-    return this.propertiesService.findAll();
+    return this.queryBus.execute(new FindAllPropertiesQuery());
   }
 
   @ApiOperation({
@@ -59,7 +68,7 @@ export class PropertiesController {
   @ApiResponse({ status: 200, description: 'List of properties in the estate' })
   @Get('estate/:estateId')
   findByEstate(@Param('estateId') estateId: string) {
-    return this.propertiesService.findByEstate(estateId);
+    return this.queryBus.execute(new FindAllPropertiesQuery(estateId));
   }
 
   @ApiOperation({
@@ -70,7 +79,7 @@ export class PropertiesController {
   @ApiResponse({ status: 404, description: 'Property not found' })
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.propertiesService.findOne(id);
+    return this.queryBus.execute(new FindPropertyByIdQuery(id));
   }
 
   @ApiOperation({
@@ -85,7 +94,7 @@ export class PropertiesController {
     @Param('id') id: string,
     @Body() updatePropertyDto: UpdatePropertyDto,
   ) {
-    return this.propertiesService.update(id, updatePropertyDto);
+    return this.commandBus.execute(new UpdatePropertyCommand(id, updatePropertyDto));
   }
 
   @ApiOperation({
@@ -97,6 +106,6 @@ export class PropertiesController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   remove(@Param('id') id: string) {
-    return this.propertiesService.remove(id);
+    return this.commandBus.execute(new DeletePropertyCommand(id));
   }
 }

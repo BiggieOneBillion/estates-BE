@@ -1,4 +1,5 @@
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 import { User } from '../../users/entities/user.entity';
 import { Estate } from '../../estates/entities/estate.entity';
 export declare enum PropertyType {
@@ -11,7 +12,11 @@ export declare enum OccupancyStatus {
     VACANT = "vacant",
     OCCUPIED = "occupied"
 }
-export declare class Property extends Document {
+export declare class Property extends Document implements SoftDeleteDocument {
+    isDeleted: boolean;
+    deletedAt?: Date;
+    softDelete: () => Promise<this>;
+    restore: () => Promise<this>;
     identifier: string;
     type: PropertyType;
     landlordId: User;

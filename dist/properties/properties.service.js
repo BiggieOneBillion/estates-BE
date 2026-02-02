@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PropertiesService = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
-const mongoose_2 = require("mongoose");
 const property_entity_1 = require("./entities/property.entity");
 let PropertiesService = class PropertiesService {
     propertyModel;
@@ -53,8 +52,8 @@ let PropertiesService = class PropertiesService {
         return updatedProperty;
     }
     async remove(id) {
-        const result = await this.propertyModel.deleteOne({ _id: id }).exec();
-        if (result.deletedCount === 0) {
+        const result = await this.propertyModel.softDelete({ _id: id });
+        if (result.matchedCount === 0) {
             throw new common_1.NotFoundException(`Property with ID ${id} not found`);
         }
     }
@@ -63,6 +62,6 @@ exports.PropertiesService = PropertiesService;
 exports.PropertiesService = PropertiesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(property_entity_1.Property.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model])
+    __metadata("design:paramtypes", [Object])
 ], PropertiesService);
 //# sourceMappingURL=properties.service.js.map

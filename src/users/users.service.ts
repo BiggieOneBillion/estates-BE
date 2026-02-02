@@ -9,8 +9,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SoftDeleteModel } from 'src/common/database/soft-delete.plugin';
 
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserRequestDto } from './dto/request/create-user.request.dto';
+import { UpdateUserRequestDto } from './dto/request/update-user.request.dto';
 import * as bcrypt from 'bcrypt';
 import {
   AdminPosition,
@@ -19,7 +19,7 @@ import {
   UserRole,
 } from './entities/user.entity';
 import { plainToInstance } from 'class-transformer';
-import { UserResponseDto } from 'src/auth/dto/verify-login-response.dto';
+import { UserResponseDto } from './dto/response/user.response.dto';
 
 @Injectable()
 export class UsersService {
@@ -76,7 +76,7 @@ export class UsersService {
       .exec();
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(id: string, updateUserDto: UpdateUserRequestDto): Promise<User> {
     const user = await this.userModel.findById(id);
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);

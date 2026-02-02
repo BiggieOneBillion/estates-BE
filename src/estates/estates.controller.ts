@@ -23,8 +23,14 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from 'src/users/entities/user.entity';
 import { Roles } from 'src/auth/decorators/role.decorator';
-import { UsersService } from 'src/users/users.service';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CreateEstateCommand } from './cqrs/commands/impl/create-estate.command';
+import { UpdateEstateCommand } from './cqrs/commands/impl/update-estate.command';
+import { DeleteEstateCommand } from './cqrs/commands/impl/delete-estate.command';
+import { FindAllEstatesQuery } from './cqrs/queries/impl/find-all-estates.query';
+import { FindEstateByIdQuery } from './cqrs/queries/impl/find-estate-by-id.query';
+import { FindUserByIdQuery } from '../users/cqrs/queries/impl/find-user-by-id.query';
 
 @ApiTags('Estates')
 @ApiBearerAuth()
@@ -32,8 +38,8 @@ import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 @UseGuards(JwtAuthGuard, VerifiedGuard)
 export class EstatesController {
   constructor(
-    private readonly estatesService: EstatesService,
-    private readonly usersService: UsersService,
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
   ) {}
 
   @ApiOperation({
@@ -46,7 +52,7 @@ export class EstatesController {
   @Roles(UserRole.SUPER_ADMIN)
   create(@Body() createEstateDto: CreateEstateDto, @Request() request) {
     const userId = request.user.userId;
-    return this.estatesService.create(createEstateDto, userId);
+    return this.commandBus.execute(new CreateEstateCommand(createEstateDto, userId));
   }
 
   @ApiOperation({
@@ -58,7 +64,7 @@ export class EstatesController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SITE_ADMIN)
   findAll() {
-    return this.estatesService.findAll();
+    return this.queryBus.execute(new FindAllEstatesQuery());
   }
 
   @ApiOperation({
@@ -72,7 +78,7 @@ export class EstatesController {
   @Roles(UserRole.SUPER_ADMIN)
   async findOne(@Param('id') id: string, @Request() request) {
     const userId = request.user.userId;
-    const user = await this.usersService.findOne(userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(userId));
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -83,7 +89,7 @@ export class EstatesController {
         'User does not have permission to access this estate',
       );
     }
-    return this.estatesService.findOne(id);
+    return this.queryBus.execute(new FindEstateByIdQuery(id));
   }
 
   @ApiOperation({
@@ -100,7 +106,7 @@ export class EstatesController {
     @Request() request,
   ) {
     const userId = request.user.userId;
-    const user = await this.usersService.findOne(userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(userId));
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -112,7 +118,7 @@ export class EstatesController {
       );
     }
 
-    return this.estatesService.update(id, updateEstateDto);
+    return this.commandBus.execute(new UpdateEstateCommand(id, updateEstateDto));
   }
 
   @ApiOperation({
@@ -125,7 +131,7 @@ export class EstatesController {
   @Roles(UserRole.SUPER_ADMIN)
   async remove(@Param('id') id: string, @Request() request) {
     const userId = request.user.userId;
-    const user = await this.usersService.findOne(userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(userId));
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -136,7 +142,7 @@ export class EstatesController {
         'User does not have permission to access this estate',
       );
     }
-    return this.estatesService.remove(id);
+    return this.commandBus.execute(new DeleteEstateCommand(id));
   }
 }
 

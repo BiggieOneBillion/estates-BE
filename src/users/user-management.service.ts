@@ -17,9 +17,9 @@ import {
 } from './entities/user.entity';
 import { EventPublisher } from 'src/common/events/services/event-publisher.service';
 import { UserAccountCreatedEvent } from 'src/common/events/domain/user-events';
-import { CreateAdminDetailsDto } from './dto/create-admin.dto';
-import { CreateUserDto } from './dto/create-user.dto';
-import { CreateTenantDto } from './dto/create-tenant.dto';
+import { CreateAdminDetailsDto } from './dto/request/create-admin.request.dto';
+import { CreateUserRequestDto } from './dto/request/create-user.request.dto';
+import { CreateTenantRequestDto } from './dto/request/create-tenant.request.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -308,7 +308,7 @@ export class UserManagementService {
    */
   async createUser(
     requesterId: string,
-    userData: CreateUserDto,
+    userData: CreateUserRequestDto,
   ): Promise<User> {
     const requester = await this.userModel.findById(requesterId);
     if (!requester || !requester.estateId) {

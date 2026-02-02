@@ -1,40 +1,29 @@
-import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
-import { VerifyLoginDto } from './dto/verify-login.dto';
-import { VerifyEmailDto } from './dto/verify-email.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { VerifyPreAuthDto } from './dto/verify-preauth.dto';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { LoginRequestDto } from './dto/request/login.request.dto';
+import { RegisterRequestDto } from './dto/request/register.request.dto';
+import { VerifyLoginRequestDto } from './dto/request/verify-login.request.dto';
+import { VerifyEmailRequestDto } from './dto/request/verify-email.request.dto';
+import { ForgotPasswordRequestDto } from './dto/request/forgot-password.request.dto';
+import { VerifyResetOtpRequestDto } from './dto/request/verify-reset-otp.request.dto';
+import { ResetPasswordRequestDto } from './dto/request/reset-password.request.dto';
+import { VerifyPreAuthRequestDto } from './dto/request/verify-preauth.request.dto';
 import { Response } from 'express';
 export declare class AuthController {
-    private authService;
-    constructor(authService: AuthService);
-    login(loginDto: LoginDto, req: any): Promise<any>;
-    VerifyLoginEmail(verifyLoginDto: VerifyLoginDto): Promise<{
-        user: import("./dto/verify-login-response.dto").UserResponseDto;
-        access_token: string;
-    }>;
-    Register(registerDto: RegisterDto): Promise<{
-        access_token: string;
-    }>;
-    verifyPreAuth(verifyPreAuthDto: VerifyPreAuthDto, req: any): Promise<{
-        user: import("./dto/verify-login-response.dto").UserResponseDto;
-        access_token: string;
-    }>;
-    VerifyRegistrationEmail(verifyEmailDto: VerifyEmailDto): Promise<{
-        message: string;
-        status: number;
-    }>;
+    private commandBus;
+    private queryBus;
+    constructor(commandBus: CommandBus, queryBus: QueryBus);
+    login(loginDto: LoginRequestDto, req: any): Promise<any>;
+    VerifyLoginEmail(verifyLoginDto: VerifyLoginRequestDto): Promise<any>;
+    Register(registerDto: RegisterRequestDto): Promise<any>;
+    verifyPreAuth(verifyPreAuthDto: VerifyPreAuthRequestDto, req: any): Promise<any>;
+    VerifyRegistrationEmail(verifyEmailDto: VerifyEmailRequestDto): Promise<any>;
     getProfile(req: any): any;
-    requestPasswordReset(forgotPasswordDto: ForgotPasswordDto): Promise<{
+    requestPasswordReset(forgotPasswordDto: ForgotPasswordRequestDto): Promise<any>;
+    verifyPasswordResetOTP(verifyResetOtpDto: VerifyResetOtpRequestDto, res: Response): Promise<{
         message: string;
     }>;
-    verifyPasswordResetOTP(verifyResetOtpDto: VerifyResetOtpDto, res: Response): Promise<{
+    resetPassword(resetPasswordDto: ResetPasswordRequestDto, req: any, res: Response): Promise<{
         message: string;
     }>;
-    resetPassword(resetPasswordDto: ResetPasswordDto, req: any, res: Response): Promise<{
-        message: string;
-    }>;
+    logout(req: any): Promise<any>;
 }

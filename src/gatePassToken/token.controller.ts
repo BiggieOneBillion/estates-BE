@@ -14,7 +14,6 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
-import { TokenService } from './token.service';
 import { CreateTokenDto } from './dto/create-token.dto';
 import { UpdateTokenDto } from './dto/update-token.dto';
 import { MeansOfIdentificationDto } from './dto/means-of-identification.dto';
@@ -35,10 +34,17 @@ import {
   UserRole,
 } from '../users/entities/user.entity';
 import { Roles } from 'src/auth/decorators/role.decorator';
-import { UsersService } from 'src/users/users.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CreateTokenCommand } from './cqrs/commands/impl/create-token.command';
+import { UpdateTokenCommand } from './cqrs/commands/impl/update-token.command';
+import { DeleteTokenCommand } from './cqrs/commands/impl/delete-token.command';
+import { VerifyTokenCommand } from './cqrs/commands/impl/verify-token.command';
+import { VerifyVisitorTokenCommand } from './cqrs/commands/impl/verify-visitor-token.command';
+import { FindAllTokensQuery, FindTokensByUserQuery, FindTokensByEstateQuery, FindTokenByIdQuery, FindTokenByStringQuery } from './cqrs/queries/impl/token-queries.impl';
+import { FindUserByIdQuery } from '../users/cqrs/queries/impl/find-user-by-id.query';
 
 @ApiTags('Gate Pass Tokens')
 @ApiBearerAuth()
@@ -46,9 +52,9 @@ import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 @UseGuards(JwtAuthGuard, VerifiedGuard, RolesGuard)
 export class TokenController {
   constructor(
-    private readonly tokenService: TokenService,
-    private readonly userService: UsersService,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
   ) {}
 
   @Post()
@@ -63,7 +69,7 @@ export class TokenController {
   async create(@Body() createTokenDto: CreateTokenDto, @Request() req) {
     // console.log('THE VERY BEGIGNING');
     // check if the user really belongs to the estate they are generating the token for.
-    const user = await this.userService.findOne(req.user.userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -82,7 +88,7 @@ export class TokenController {
     }
 
     console.log('THE VERY END');
-    return this.tokenService.create(createTokenDto, req.user.userId);
+    return this.commandBus.execute(new CreateTokenCommand(createTokenDto, req.user.userId));
   }
 
   @Post('means-of-identification')
@@ -106,16 +112,16 @@ export class TokenController {
     }
 
     // Find the token
-    const token = await this.tokenService.findOne(meansOfIdDto.token);
+    const token = await this.queryBus.execute(new FindTokenByIdQuery(meansOfIdDto.token));
 
     // Upload the image to Cloudinary
     const uploadResult = await this.cloudinaryService.uploadImage(file);
 
     // Update the token with means of identification and image URL
-    const updatedToken = await this.tokenService.update(token._id as string, {
+    const updatedToken = await this.commandBus.execute(new UpdateTokenCommand(token._id as string, {
       meansOfId: meansOfIdDto.meansOfId!,
       idImgUrl: uploadResult.secure_url!,
-    }, req.user.userId, true);
+    }, req.user.userId, true));
 
     return {
       message: 'Means of identification added successfully',
@@ -134,7 +140,7 @@ export class TokenController {
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SECURITY)
   async findAll(@Request() req, @Query('estateId') estateId?: string) {
     // Get the current user
-    const user = await this.userService.findOne(req.user.userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -177,7 +183,7 @@ export class TokenController {
         }
       }
       // console.log("DONE GIVE ME DATA")
-      const data = await this.tokenService.findAllByEstate(estateId);
+      const data = await this.queryBus.execute(new FindTokensByEstateQuery(estateId));
       return data.filter((el) => el.used);
     } else {
       // If no estateId provided, only SUPER_ADMIN can see all tokens
@@ -187,7 +193,7 @@ export class TokenController {
         );
       }
 
-      return this.tokenService.findAll();
+      return this.queryBus.execute(new FindAllTokensQuery());
     }
   }
 
@@ -197,13 +203,13 @@ export class TokenController {
   @Roles(UserRole.SUPER_ADMIN)
   async findUserTokens(@Request() req, @Param() param: { id: string }) {
     // check if the user is in the same estate as the super admin
-    const superAdmin = await this.userService.findOne(req.user.userId);
+    const superAdmin = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
 
     if (!superAdmin) {
       throw new BadRequestException('Super admin not found');
     }
 
-    const user = await this.userService.findOne(param.id);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(param.id));
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -212,7 +218,7 @@ export class TokenController {
         'You are not authorized to view this user tokens',
       );
     }
-    return this.tokenService.findAllByUser(param.id);
+    return this.queryBus.execute(new FindTokensByUserQuery(param.id));
   }
 
   @Get('my-tokens')
@@ -225,7 +231,7 @@ export class TokenController {
     UserRole.SUPER_ADMIN,
   )
   findMyTokens(@Request() req) {
-    return this.tokenService.findAllByUser(req.user.userId);
+    return this.queryBus.execute(new FindTokensByUserQuery(req.user.userId));
   }
 
   @Get(':tokenId')
@@ -239,7 +245,7 @@ export class TokenController {
     UserRole.SECURITY,
   )
   findOne(@Param('tokenId') tokenId: string) {
-    return this.tokenService.findByTokenString(tokenId);
+    return this.queryBus.execute(new FindTokenByStringQuery(tokenId));
   }
 
   @Get('verify/:token')
@@ -248,7 +254,7 @@ export class TokenController {
   @ApiParam({ name: 'token', description: 'The token string to verify' })
   @Roles(UserRole.SECURITY, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   verifyToken(@Param('token') token: string, @Request() req) {
-    return this.tokenService.verifyToken(token, req.user.userId);
+    return this.commandBus.execute(new VerifyTokenCommand(token, req.user.userId));
   }
 
   @Post('verify-visitor/:token')
@@ -257,7 +263,7 @@ export class TokenController {
   @ApiParam({ name: 'token', description: 'The token string to verify' })
   @Roles(UserRole.TENANT, UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.LANDLORD)
   verifyVisitorToken(@Param('token') token: string, @Request() req) {
-    return this.tokenService.verifyVisitorToken(token, req.user.userId);
+    return this.commandBus.execute(new VerifyVisitorTokenCommand(token, req.user.userId));
   }
 
   @Patch(':tokenId')
@@ -276,7 +282,7 @@ export class TokenController {
   ) {
     // console.log("clean title")
     const user = req.user.userId
-    return this.tokenService.update(tokenId, updateTokenDto, user);
+    return this.commandBus.execute(new UpdateTokenCommand(tokenId, updateTokenDto, user));
   }
 
   @Delete(':tokenId')
@@ -289,6 +295,6 @@ export class TokenController {
     UserRole.SUPER_ADMIN,
   )
   remove(@Param('tokenId') tokenId: string) {
-    return this.tokenService.remove(tokenId);
+    return this.commandBus.execute(new DeleteTokenCommand(tokenId));
   }
 }

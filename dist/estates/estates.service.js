@@ -93,8 +93,8 @@ let EstatesService = EstatesService_1 = class EstatesService {
         return updatedEstate;
     }
     async remove(id) {
-        const result = await this.estateModel.deleteOne({ _id: id }).exec();
-        if (result.deletedCount === 0) {
+        const result = await this.estateModel.softDelete({ _id: id });
+        if (result.matchedCount === 0) {
             throw new common_1.NotFoundException(`Estate with ID ${id} not found`);
         }
     }
@@ -105,8 +105,7 @@ exports.EstatesService = EstatesService = EstatesService_1 = __decorate([
     __param(0, (0, mongoose_1.InjectModel)(estate_entity_1.Estate.name)),
     __param(1, (0, mongoose_1.InjectModel)(user_entity_1.User.name)),
     __param(2, (0, mongoose_1.InjectConnection)()),
-    __metadata("design:paramtypes", [mongoose_2.Model,
-        mongoose_2.Model,
+    __metadata("design:paramtypes", [Object, mongoose_2.Model,
         mongoose_2.Connection])
 ], EstatesService);
 //# sourceMappingURL=estates.service.js.map

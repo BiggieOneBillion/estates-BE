@@ -10,8 +10,16 @@ import {
   UnauthorizedException,
   Req,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { LoginCommand } from './cqrs/commands/impl/login.command';
+import { RegisterCommand } from './cqrs/commands/impl/register.command';
+import { VerifyPreAuthCommand } from './cqrs/commands/impl/verify-preauth.command';
+import { VerifyEmailCommand } from './cqrs/commands/impl/verify-email.command';
+import { ForgotPasswordCommand } from './cqrs/commands/impl/forgot-password.command';
+import { VerifyResetOtpCommand } from './cqrs/commands/impl/verify-reset-otp.command';
+import { ResetPasswordCommand } from './cqrs/commands/impl/reset-password.command';
+import { LogoutCommand } from './cqrs/commands/impl/logout.command';
+import { VerifyLoginCommand } from './cqrs/commands/impl/verify-login.command';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { VerifiedGuard } from './guards/verified.guard';
 import {
@@ -21,16 +29,17 @@ import {
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
-import { RegisterDto } from './dto/register.dto';
-import { VerifyLoginDto } from './dto/verify-login.dto';
-import { VerifyEmailDto } from './dto/verify-email.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { VerifyLoginResponseDto } from './dto/verify-login-response.dto';
-import { VerifyPreAuthDto } from './dto/verify-preauth.dto';
+import { LoginRequestDto } from './dto/request/login.request.dto';
+import { RegisterRequestDto } from './dto/request/register.request.dto';
+import { VerifyLoginRequestDto } from './dto/request/verify-login.request.dto';
+import { VerifyEmailRequestDto } from './dto/request/verify-email.request.dto';
+import { ForgotPasswordRequestDto } from './dto/request/forgot-password.request.dto';
+import { VerifyResetOtpRequestDto } from './dto/request/verify-reset-otp.request.dto';
+import { ResetPasswordRequestDto } from './dto/request/reset-password.request.dto';
+import { VerifyLoginResponseDto } from './dto/response/verify-login.response.dto';
+import { VerifyPreAuthRequestDto } from './dto/request/verify-preauth.request.dto';
 import { Response } from 'express';
-import { request } from 'http';
+// import { request } from 'http';
 
 /**
  * Authentication Controller
@@ -41,7 +50,10 @@ import { request } from 'http';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private commandBus: CommandBus,
+    private queryBus: QueryBus,
+  ) {}
 
   @ApiOperation({
     summary: 'User login',
@@ -50,10 +62,10 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @Post('login')
-  async login(@Body() loginDto: LoginDto, @Request() req) {
+  async login(@Body() loginDto: LoginRequestDto, @Request() req) {
     const userAgent = req.headers['user-agent'];
     const isMobile = /mobile/i.test(userAgent);
-    return this.authService.login(loginDto, isMobile);
+    return this.commandBus.execute(new LoginCommand(loginDto, isMobile));
   }
 
   @ApiOperation({
@@ -67,8 +79,8 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
   @Post('login/verify')
-  async VerifyLoginEmail(@Body() verifyLoginDto: VerifyLoginDto) {
-    return this.authService.validateUserEmailLogin(verifyLoginDto);
+  async VerifyLoginEmail(@Body() verifyLoginDto: VerifyLoginRequestDto) {
+    return this.commandBus.execute(new VerifyLoginCommand(verifyLoginDto));
   }
 
   @ApiOperation({
@@ -78,9 +90,8 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Registration successful' })
   @ApiResponse({ status: 400, description: 'Bad request or user already exists' })
   @Post('register')
-  async Register(@Body() registerDto: RegisterDto) {
-    console.log(registerDto);
-    return this.authService.register(registerDto);
+  async Register(@Body() registerDto: RegisterRequestDto) {
+    return this.commandBus.execute(new RegisterCommand(registerDto));
   }
 
   @ApiOperation({
@@ -95,8 +106,8 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('verify-preauth')
-  async verifyPreAuth(@Body() verifyPreAuthDto: VerifyPreAuthDto, @Request() req) {
-    return this.authService.verifyPreAuth(verifyPreAuthDto, req.user);
+  async verifyPreAuth(@Body() verifyPreAuthDto: VerifyPreAuthRequestDto, @Request() req) {
+    return this.commandBus.execute(new VerifyPreAuthCommand(verifyPreAuthDto, req.user));
   }
 
   @ApiOperation({
@@ -109,9 +120,9 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('verify-email')
   async VerifyRegistrationEmail(
-    @Body() verifyEmailDto: VerifyEmailDto,
+    @Body() verifyEmailDto: VerifyEmailRequestDto,
   ) {
-    return this.authService.verifyEmail(verifyEmailDto.data);
+    return this.commandBus.execute(new VerifyEmailCommand(verifyEmailDto.data.email, verifyEmailDto.data.code));
   }
 
   @ApiOperation({
@@ -134,8 +145,8 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password reset OTP sent successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @Post('forgot-password')
-  async requestPasswordReset(@Body() forgotPasswordDto: ForgotPasswordDto) {
-    return this.authService.sendPasswordResetOTP(forgotPasswordDto.email);
+  async requestPasswordReset(@Body() forgotPasswordDto: ForgotPasswordRequestDto) {
+    return this.commandBus.execute(new ForgotPasswordCommand(forgotPasswordDto.email));
   }
 
   @ApiOperation({
@@ -146,13 +157,13 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired OTP' })
   @Post('verify-reset-otp')
   async verifyPasswordResetOTP(
-    @Body() verifyResetOtpDto: VerifyResetOtpDto,
+    @Body() verifyResetOtpDto: VerifyResetOtpRequestDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { token } = await this.authService.verifyPasswordResetOTP(
+    const { token } = await this.commandBus.execute(new VerifyResetOtpCommand(
       verifyResetOtpDto.email,
       verifyResetOtpDto.code,
-    );
+    ));
 
     res.cookie('reset_token', token, {
       httpOnly: true,
@@ -174,7 +185,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Reset token is missing or expired' })
   @Post('reset-password')
   async resetPassword(
-    @Body() resetPasswordDto: ResetPasswordDto,
+    @Body() resetPasswordDto: ResetPasswordRequestDto,
     @Request() req,
     @Res({ passthrough: true }) res: Response,
   ) {
@@ -184,7 +195,7 @@ export class AuthController {
       throw new UnauthorizedException('Reset token is missing or expired');
     }
 
-    await this.authService.resetPassword(resetToken, resetPasswordDto.newPassword);
+    await this.commandBus.execute(new ResetPasswordCommand(resetToken, resetPasswordDto.newPassword));
     res.clearCookie('reset_token');
 
     return { message: 'Password has been reset successfully'};
@@ -200,7 +211,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   async logout(@Request() req) {
-    return this.authService.logout(req.user.userId);
+    return this.commandBus.execute(new LogoutCommand(req.user.userId));
   }
 }
 

@@ -61,6 +61,10 @@ let AllExceptionsFilter = class AllExceptionsFilter {
         const errorType = exception instanceof common_1.HttpException
             ? exception.getResponse()['error'] || exception.name
             : exception instanceof Error ? exception.name : 'InternalServerError';
+        const publicError = (0, error_maps_1.normalizeError)(errorType, message);
+        const finalStatus = status === common_1.HttpStatus.INTERNAL_SERVER_ERROR && publicError.statusCode !== common_1.HttpStatus.INTERNAL_SERVER_ERROR
+            ? publicError.statusCode
+            : status;
         logger_1.logger.error(`[${requestId}] UNHANDLED_EXCEPTION: ${message}`, {
             stack: exception instanceof Error ? exception.stack : undefined,
             path: request.url,
@@ -70,17 +74,17 @@ let AllExceptionsFilter = class AllExceptionsFilter {
             success: false,
             requestId,
             error: {
-                statusCode: status,
-                type: errorType,
-                message: status === common_1.HttpStatus.INTERNAL_SERVER_ERROR && process.env.NODE_ENV === 'production'
-                    ? 'An unexpected error occurred. Please contact support.'
-                    : message,
+                statusCode: finalStatus,
+                type: publicError.type,
+                message: finalStatus === common_1.HttpStatus.INTERNAL_SERVER_ERROR && process.env.NODE_ENV === 'production'
+                    ? error_maps_1.ERROR_MAPS['InternalServerError'].message
+                    : publicError.message,
             },
             timestamp: new Date().toISOString(),
             path: request.url,
             method: request.method,
         };
-        response.status(status).json(errorResponse);
+        response.status(finalStatus).json(errorResponse);
     }
 };
 exports.AllExceptionsFilter = AllExceptionsFilter;

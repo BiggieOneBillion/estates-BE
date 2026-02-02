@@ -1,13 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventHandler } from 'src/common/events/interfaces/event-handler.interface';
 import { BaseDomainEvent } from 'src/common/events/domain/base-domain-event';
-import { AuditLogsService } from '../audit-logs.service';
+import { CommandBus } from '@nestjs/cqrs';
+import { CreateAuditLogCommand } from '../cqrs/commands/impl/audit-log-commands.impl';
 
 @Injectable()
 export class AuditLogHandler implements EventHandler {
   private readonly logger = new Logger(AuditLogHandler.name);
 
-  constructor(private readonly auditLogsService: AuditLogsService) {}
+  constructor(private readonly commandBus: CommandBus) {}
 
   /**
    * Return a wildcard or a list of events this handler handles.
@@ -25,7 +26,7 @@ export class AuditLogHandler implements EventHandler {
       const payload = event.getPayload();
       const metadata = event.metadata || {};
 
-      await this.auditLogsService.create({
+      await this.commandBus.execute(new CreateAuditLogCommand({
         userId: metadata.userId || (payload as any).userId || (payload as any).actorId,
         action: event.eventType,
         resource: event.aggregateType,
@@ -37,7 +38,7 @@ export class AuditLogHandler implements EventHandler {
           estateId: metadata.estateId || (payload as any).estateId,
         },
         timestamp: event.occurredAt,
-      });
+      }));
     } catch (error) {
       this.logger.error(`Failed to audit event ${event.eventType}: ${error.message}`);
       // We don't throw here to avoid failing the main event processing

@@ -20,8 +20,8 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserRequestDto } from './dto/request/create-user.request.dto';
+import { UpdateUserRequestDto } from './dto/request/update-user.request.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import {
@@ -35,20 +35,37 @@ import {
 import { Roles } from 'src/auth/decorators/role.decorator';
 import { generateStrongPassword } from 'src/common/utils/util-fn';
 import { UserManagementService } from './user-management.service';
-import { RegisterFcmTokenDto, UpdateNotificationPreferencesDto } from './dto/fcm-token.dto';
-import { CreateLandlordDto } from './dto/create-landlord.dto';
-import { CreateSecurityDto } from './dto/create-security.dto';
-import { CreateTenantDto } from './dto/create-tenant.dto';
-import { CreateAdminDto, CreateAdminDetailsDto } from './dto/create-admin.dto';
-import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UpdatePermissionsDto } from './dto/update-permissions.dto';
+import { RegisterFcmTokenRequestDto, UpdateNotificationPreferencesRequestDto } from './dto/request/fcm-token.request.dto';
+import { CreateLandlordRequestDto } from './dto/request/create-landlord.request.dto';
+import { CreateSecurityRequestDto } from './dto/request/create-security.request.dto';
+import { CreateTenantRequestDto } from './dto/request/create-tenant.request.dto';
+import { CreateAdminRequestDto, CreateAdminDetailsDto } from './dto/request/create-admin.request.dto';
+import { CreateSuperAdminRequestDto } from './dto/request/create-super-admin.request.dto';
+import { UpdateProfileRequestDto } from './dto/request/update-profile.request.dto';
+import { UpdatePermissionsRequestDto } from './dto/request/update-permissions.request.dto';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
-import { UserResponseDto } from 'src/auth/dto/verify-login-response.dto';
+import { UserResponseDto } from './dto/response/user.response.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { RequirePermission } from 'src/auth/decorators/permissions.decorator';
 import { PermissionsGuard } from 'src/auth/guards/permissions.guard';
 import { User as UserEntity } from './entities/user.entity';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { CreateAdminCommand } from './cqrs/commands/impl/create-admin.command';
+import { CreateLandlordCommand } from './cqrs/commands/impl/create-landlord.command';
+import { CreateTenantCommand } from './cqrs/commands/impl/create-tenant.command';
+import { CreateSecurityCommand } from './cqrs/commands/impl/create-security.command';
+import { UpdateUserCommand } from './cqrs/commands/impl/update-user.command';
+import { UpdateUserPermissionsCommand } from './cqrs/commands/impl/update-user-permissions.command';
+import { DisableTokenGenerationCommand } from './cqrs/commands/impl/disable-token-generation.command';
+import { EnableTokenGenerationCommand } from './cqrs/commands/impl/enable-token-generation.command';
+import { RegisterFcmTokenCommand } from './cqrs/commands/impl/register-fcm-token.command';
+import { RemoveFcmTokenCommand } from './cqrs/commands/impl/remove-fcm-token.command';
+import { UpdateNotificationPreferencesCommand } from './cqrs/commands/impl/update-notification-preferences.command';
+import { PromoteLandlordToAdminCommand } from './cqrs/commands/impl/promote-landlord-to-admin.command';
+import { RemoveAdminRoleCommand } from './cqrs/commands/impl/remove-admin-role.command';
+import { DeleteUserCommand } from './cqrs/commands/impl/delete-user.command';
+import { FindByEstateQuery } from './cqrs/queries/impl/find-by-estate.query';
+import { FindUserByIdQuery } from './cqrs/queries/impl/find-user-by-id.query';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -58,6 +75,8 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly userManagement: UserManagementService,
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
   ) {}
 
   @ApiOperation({
@@ -70,25 +89,27 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @RequirePermission(ResourceType.ADMINS, PermissionAction.CREATE)
   async createAdmins(
-    @Body() createAdminDto: CreateAdminDto,
+    @Body() createAdminDto: CreateAdminRequestDto,
     @CurrentUser() user: any,
   ) {
     if (createAdminDto.primaryRole !== UserRole.ADMIN) {
       throw new ForbiddenException('You can only create an admin user');
     }
     
-    return this.userManagement.createAdmin(
-      user.userId,
-      {
-        firstName: createAdminDto.firstName,
-        lastName: createAdminDto.lastName,
-        email: createAdminDto.email,
-        phone: createAdminDto.phone,
-        position: createAdminDto.adminDetails!.position,
-        customPositionTitle: createAdminDto.adminDetails?.customPositionTitle,
-        department: createAdminDto.adminDetails?.department,
-        additionalPermissions: createAdminDto.adminDetails?.additionalPermissions,
-      },
+    return this.commandBus.execute(
+      new CreateAdminCommand(
+        user.userId,
+        {
+          firstName: createAdminDto.firstName,
+          lastName: createAdminDto.lastName,
+          email: createAdminDto.email,
+          phone: createAdminDto.phone,
+          position: createAdminDto.adminDetails!.position,
+          customPositionTitle: createAdminDto.adminDetails?.customPositionTitle,
+          department: createAdminDto.adminDetails?.department,
+          additionalPermissions: createAdminDto.adminDetails?.additionalPermissions,
+        },
+      )
     );
   }
 
@@ -102,22 +123,24 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @RequirePermission(ResourceType.LANDLORDS, PermissionAction.CREATE)
   async createLandLord(
-    @Body() createLandlordDto: CreateLandlordDto,
+    @Body() createLandlordDto: CreateLandlordRequestDto,
     @CurrentUser('userId') userId: string,
   ) {
     if (createLandlordDto.primaryRole !== UserRole.LANDLORD) {
       throw new ForbiddenException('You can only create a landlord');
     }
 
-    return this.userManagement.createLandlord(
-      userId,
-      {
-        firstName: createLandlordDto.firstName,
-        lastName: createLandlordDto.lastName,
-        email: createLandlordDto.email,
-        phone: createLandlordDto.phone,
-        canCreateTenants: createLandlordDto.canCreateTenants,
-      },
+    return this.commandBus.execute(
+      new CreateLandlordCommand(
+        userId,
+        {
+          firstName: createLandlordDto.firstName,
+          lastName: createLandlordDto.lastName,
+          email: createLandlordDto.email,
+          phone: createLandlordDto.phone,
+          canCreateTenants: createLandlordDto.canCreateTenants,
+        },
+      )
     );
   }
 
@@ -130,7 +153,7 @@ export class UsersController {
   @Post('create/tenant')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LANDLORD)
   async createTenant(
-    @Body() createTenantDto: CreateTenantDto,
+    @Body() createTenantDto: CreateTenantRequestDto,
     @CurrentUser('userId') userId: string,
   ) {
     if (createTenantDto.primaryRole !== UserRole.TENANT) {
@@ -140,21 +163,23 @@ export class UsersController {
     // Business logic: only landlord themselves or authorized admins can create tenants
     const targetLandlordId = createTenantDto.tenantDetails.landlordId;
 
-    return this.userManagement.createTenant(
-      targetLandlordId,
-      {
-        firstName: createTenantDto.firstName,
-        lastName: createTenantDto.lastName,
-        email: createTenantDto.email,
-        phone: createTenantDto.phone,
-        propertyUnit: createTenantDto.tenantDetails?.propertyUnit,
-        leaseStartDate: createTenantDto.tenantDetails?.leaseStartDate
-          ? new Date(createTenantDto.tenantDetails.leaseStartDate)
-          : undefined,
-        leaseEndDate: createTenantDto.tenantDetails?.leaseEndDate
-          ? new Date(createTenantDto.tenantDetails.leaseEndDate)
-          : undefined,
-      },
+    return this.commandBus.execute(
+      new CreateTenantCommand(
+        targetLandlordId,
+        {
+          firstName: createTenantDto.firstName,
+          lastName: createTenantDto.lastName,
+          email: createTenantDto.email,
+          phone: createTenantDto.phone,
+          propertyUnit: createTenantDto.tenantDetails?.propertyUnit,
+          leaseStartDate: createTenantDto.tenantDetails?.leaseStartDate
+            ? new Date(createTenantDto.tenantDetails.leaseStartDate)
+            : undefined,
+          leaseEndDate: createTenantDto.tenantDetails?.leaseEndDate
+            ? new Date(createTenantDto.tenantDetails.leaseEndDate)
+            : undefined,
+        }
+      )
     );
   }
 
@@ -168,17 +193,19 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @RequirePermission(ResourceType.USERS, PermissionAction.CREATE)
   async createSecurity(
-    @Body() createSecurityDto: CreateSecurityDto,
+    @Body() createSecurityDto: CreateSecurityRequestDto,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.userManagement.createSecurity(
-      userId,
-      {
-        firstName: createSecurityDto.firstName,
-        lastName: createSecurityDto.lastName,
-        email: createSecurityDto.email,
-        phone: createSecurityDto.phone,
-      },
+    return this.commandBus.execute(
+      new CreateSecurityCommand(
+        userId,
+        {
+          firstName: createSecurityDto.firstName,
+          lastName: createSecurityDto.lastName,
+          email: createSecurityDto.email,
+          phone: createSecurityDto.phone,
+        }
+      )
     );
   }
 
@@ -245,7 +272,7 @@ export class UsersController {
     if (!estate) {
       throw new ForbiddenException('You must belong to an estate');
     }
-    return this.usersService.findByEstate(estate.toString());
+    return this.queryBus.execute(new FindByEstateQuery(estate.toString()));
   }
 
   @ApiOperation({
@@ -260,14 +287,14 @@ export class UsersController {
     @CurrentUser() currentUser: any,
   ) {
     if (id === currentUser.userId) {
-      return this.usersService.findOne(id);
+      return this.queryBus.execute(new FindUserByIdQuery(id));
     }
 
     // Admins and Super Admins can see others
     if ([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SITE_ADMIN].includes(currentUser.roles)) {
        // PermissionsGuard will handle granular check if we wanted it, but findOne is usually basic.
        // We should still ensure estate scope.
-       const targetUser = await this.usersService.findOne(id);
+       const targetUser = await this.queryBus.execute(new FindUserByIdQuery(id));
        if (currentUser.roles !== UserRole.SUPER_ADMIN && targetUser.estateId?.toString() !== currentUser.estate?._id?.toString()) {
          throw new ForbiddenException('Cannot access users from a different estate');
        }
@@ -287,7 +314,7 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   update(
     @Param('id') id: string,
-    @Body() updateUserDto: UpdateUserDto,
+    @Body() updateUserDto: UpdateUserRequestDto,
     @Request() req,
   ) {
     if (
@@ -307,7 +334,7 @@ export class UsersController {
           );
         }
       }
-      return this.usersService.update(id, updateUserDto);
+      return this.commandBus.execute(new UpdateUserCommand(id, updateUserDto));
     }
     throw new ForbiddenException(
       'You do not have permission to update this resource',
@@ -322,11 +349,11 @@ export class UsersController {
   @Patch(':id')
   userUpdateOwnProfile(
     @Param('id') id: string,
-    @Body() updateProfileDto: UpdateProfileDto,
+    @Body() updateProfileDto: UpdateProfileRequestDto,
     @CurrentUser('userId') currentUserId: string,
   ) {
     if (id === currentUserId) {
-      return this.usersService.update(id, updateProfileDto);
+      return this.commandBus.execute(new UpdateUserCommand(id, updateProfileDto));
     }
     throw new ForbiddenException('You can only update your own profile here');
   }
@@ -341,10 +368,10 @@ export class UsersController {
   @RequirePermission(ResourceType.USERS, PermissionAction.UPDATE)
   async editUser(
     @Param('id') id: string,
-    @Body() updateUserDto: UpdateUserDto,
+    @Body() updateUserDto: UpdateUserRequestDto,
     @CurrentUser() currentUser: any,
   ) {
-    const userToUpdate = await this.usersService.findOne(id);
+    const userToUpdate = await this.queryBus.execute(new FindUserByIdQuery(id));
     
     if (currentUser.roles !== UserRole.SUPER_ADMIN && userToUpdate.estateId?.toString() !== currentUser.estate?._id?.toString()) {
       throw new ForbiddenException('Cannot update users from a different estate');
@@ -365,7 +392,7 @@ export class UsersController {
     @CurrentUser('userId') currentUserId: string,
     @Body() body: CreateAdminDetailsDto,
   ) {
-    return this.userManagement.makeLandlordAdmin(currentUserId, id, body);
+    return this.commandBus.execute(new PromoteLandlordToAdminCommand(currentUserId, id, body));
   }
 
   @ApiOperation({
@@ -379,7 +406,7 @@ export class UsersController {
     @Param('id') id: string,
     @CurrentUser('userId') currentUserId: string,
   ) {
-    return this.userManagement.removeAdminRole(currentUserId, id);
+    return this.commandBus.execute(new RemoveAdminRoleCommand(currentUserId, id));
   }
 
   @ApiOperation({
@@ -394,13 +421,13 @@ export class UsersController {
     @Param('id') id: string,
     @CurrentUser() currentUser: any,
   ) {
-    const userToRemove = await this.usersService.findOne(id);
+    const userToRemove = await this.queryBus.execute(new FindUserByIdQuery(id));
 
     if (currentUser.roles !== UserRole.SUPER_ADMIN && userToRemove.estateId?.toString() !== currentUser.estate?._id?.toString()) {
       throw new ForbiddenException('Cannot delete users from a different estate');
     }
 
-    return this.usersService.remove(id);
+    return this.commandBus.execute(new DeleteUserCommand(id));
   }
 
   @ApiOperation({
@@ -413,19 +440,19 @@ export class UsersController {
   @RequirePermission(ResourceType.ADMINS, PermissionAction.MANAGE)
   async updatePermissions(
     @Param('userId') userId: string,
-    @Body() updatePermissionsDto: UpdatePermissionsDto,
+    @Body() updatePermissionsDto: UpdatePermissionsRequestDto,
     @CurrentUser() currentUser: any,
   ) {
-    const userToUpdate = await this.usersService.findOne(userId);
+    const userToUpdate = await this.queryBus.execute(new FindUserByIdQuery(userId));
     
     if (currentUser.roles !== UserRole.SUPER_ADMIN && userToUpdate.estateId?.toString() !== currentUser.estate?._id?.toString()) {
       throw new ForbiddenException('Cannot update permissions for users in a different estate');
     }
 
-    return this.userManagement.updateUserPermissions(
+    return this.commandBus.execute(new UpdateUserPermissionsCommand(
       userId,
       updatePermissionsDto.permission,
-    );
+    ));
   }
 
   @ApiOperation({
@@ -437,7 +464,7 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
   async disableTokenGeneration(@Param('id') id: string, @Request() req) {
-    const superAdmin = await this.usersService.findOne(req.user.userId);
+    const superAdmin = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     if (!superAdmin) {
       throw new NotFoundException('Super admin not found');
     }
@@ -446,7 +473,7 @@ export class UsersController {
       throw new NotFoundException('Super admin does not have an estate');
     }
 
-    const targetUser = await this.usersService.findOne(id);
+    const targetUser = await this.queryBus.execute(new FindUserByIdQuery(id));
     if (!targetUser) {
       throw new NotFoundException('Target user not found');
     }
@@ -457,7 +484,7 @@ export class UsersController {
       );
     }
 
-    return this.usersService.disableTokenGeneration(id);
+    return this.commandBus.execute(new DisableTokenGenerationCommand(id));
   }
 
   @ApiOperation({
@@ -469,7 +496,7 @@ export class UsersController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
   async enableTokenGeneration(@Param('id') id: string, @Request() req) {
-    const superAdmin = await this.usersService.findOne(req.user.userId);
+    const superAdmin = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     if (!superAdmin) {
       throw new NotFoundException('Super admin not found');
     }
@@ -478,7 +505,7 @@ export class UsersController {
       throw new NotFoundException('Super admin does not have an estate');
     }
 
-    const targetUser = await this.usersService.findOne(id);
+    const targetUser = await this.queryBus.execute(new FindUserByIdQuery(id));
     if (!targetUser) {
       throw new NotFoundException('Target user not found');
     }
@@ -489,7 +516,7 @@ export class UsersController {
       );
     }
 
-    return this.usersService.enableTokenGeneration(id);
+    return this.commandBus.execute(new EnableTokenGenerationCommand(id));
   }
 
   @ApiOperation({
@@ -499,10 +526,10 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'FCM token registered successfully' })
   @Post('fcm-token')
   async registerFcmToken(
-    @Body() registerFcmTokenDto: RegisterFcmTokenDto,
+    @Body() registerFcmTokenDto: RegisterFcmTokenRequestDto,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.usersService.registerFcmToken(userId, registerFcmTokenDto.fcmToken);
+    return this.commandBus.execute(new RegisterFcmTokenCommand(userId, registerFcmTokenDto.fcmToken));
   }
 
   @ApiOperation({
@@ -515,7 +542,7 @@ export class UsersController {
     @Param('token') token: string,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.usersService.removeFcmToken(userId, token);
+    return this.commandBus.execute(new RemoveFcmTokenCommand(userId, token));
   }
 
   @ApiOperation({
@@ -525,10 +552,10 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Notification preferences updated successfully' })
   @Patch('notification-preferences')
   async updateNotificationPreferences(
-    @Body() updatePreferencesDto: UpdateNotificationPreferencesDto,
+    @Body() updatePreferencesDto: UpdateNotificationPreferencesRequestDto,
     @CurrentUser('userId') userId: string,
   ) {
-    return this.usersService.updateNotificationPreferences(userId, updatePreferencesDto);
+    return this.commandBus.execute(new UpdateNotificationPreferencesCommand(userId, updatePreferencesDto));
   }
 
   @ApiOperation({
@@ -538,7 +565,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Notification preferences retrieved successfully' })
   @Get('notification-preferences/me')
   async getNotificationPreferences(@CurrentUser('userId') userId: string) {
-    const user = await this.usersService.findOne(userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(userId));
     return {
       preferences: user.notificationPreferences || { email: true, push: true, sms: false },
     };

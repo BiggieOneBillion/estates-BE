@@ -1,4 +1,5 @@
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { SoftDeleteDocument } from 'src/common/database/soft-delete.plugin';
 export declare enum UserRole {
     SITE_ADMIN = "site_admin",
     SUPER_ADMIN = "super_admin",
@@ -15,8 +16,8 @@ export declare enum AdminPosition {
     OPERATIONS_MANAGER = "operations_manager",
     PROPERTY_MANAGER = "property_manager",
     TENANT_RELATIONS = "tenant_relations",
-    CUSTOM = "custom",
-    SUPER_ADMIN = "super_admin"
+    SUPER_ADMIN = "super_admin",
+    CUSTOM = "custom"
 }
 export declare enum PermissionAction {
     CREATE = "create",
@@ -80,7 +81,11 @@ export declare class LandlordDetails {
     canCreateTenants: boolean;
     isEligibleForAdmin: boolean;
 }
-export declare class User extends Document {
+export declare class User extends Document implements SoftDeleteDocument {
+    isDeleted: boolean;
+    deletedAt?: Date;
+    softDelete: () => Promise<this>;
+    restore: () => Promise<this>;
     firstName: string;
     lastName: string;
     email: string;

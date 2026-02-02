@@ -1,8 +1,10 @@
+import { OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-export declare class MailService {
+export declare class MailService implements OnModuleInit {
     private configService;
     private transporter;
     constructor(configService: ConfigService);
+    onModuleInit(): Promise<void>;
     private createDevTransport;
     sendVerificationEmail(to: string, code: string, name: string): Promise<any>;
     accountCreationEmail(data: {

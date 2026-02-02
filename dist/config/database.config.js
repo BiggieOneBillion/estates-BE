@@ -20,6 +20,7 @@ let DatabaseConfig = class DatabaseConfig {
     getMongoConfig() {
         return {
             uri: this.configService.get('MONGODB_URI'),
+            serverSelectionTimeoutMS: 5000,
         };
     }
 };

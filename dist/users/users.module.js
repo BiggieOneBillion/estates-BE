@@ -12,8 +12,8 @@ const mongoose_1 = require("@nestjs/mongoose");
 const users_service_1 = require("./users.service");
 const users_controller_1 = require("./users.controller");
 const user_entity_1 = require("./entities/user.entity");
-const mail_service_1 = require("../common/services/mail.service");
 const user_management_service_1 = require("./user-management.service");
+const events_infrastructure_module_1 = require("../common/events/events-infrastructure.module");
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
@@ -21,9 +21,10 @@ exports.UsersModule = UsersModule = __decorate([
     (0, common_1.Module)({
         imports: [
             mongoose_1.MongooseModule.forFeature([{ name: user_entity_1.User.name, schema: user_entity_1.UserSchema }]),
+            events_infrastructure_module_1.EventsInfrastructureModule,
         ],
         controllers: [users_controller_1.UsersController],
-        providers: [users_service_1.UsersService, mail_service_1.MailService, user_management_service_1.UserManagementService],
+        providers: [users_service_1.UsersService, user_management_service_1.UserManagementService],
         exports: [users_service_1.UsersService],
     })
 ], UsersModule);

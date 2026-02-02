@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PropertySchema = exports.Property = exports.OccupancyStatus = exports.PropertyType = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
+const soft_delete_plugin_1 = require("../../common/database/soft-delete.plugin");
 const user_entity_1 = require("../../users/entities/user.entity");
 const estate_entity_1 = require("../../estates/entities/estate.entity");
 var PropertyType;
@@ -27,6 +28,10 @@ var OccupancyStatus;
     OccupancyStatus["OCCUPIED"] = "occupied";
 })(OccupancyStatus || (exports.OccupancyStatus = OccupancyStatus = {}));
 let Property = class Property extends mongoose_2.Document {
+    isDeleted;
+    deletedAt;
+    softDelete;
+    restore;
     identifier;
     type;
     landlordId;
@@ -108,4 +113,5 @@ exports.Property = Property = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Property);
 exports.PropertySchema = mongoose_1.SchemaFactory.createForClass(Property);
+exports.PropertySchema.plugin(soft_delete_plugin_1.softDeletePlugin);
 //# sourceMappingURL=property.entity.js.map

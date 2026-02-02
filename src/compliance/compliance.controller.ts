@@ -6,13 +6,14 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { ComplianceService } from './compliance.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/role.decorator';
 import { UserRole } from '../users/entities/user.entity';
-import { UsersService } from '../users/users.service';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
+import { QueryBus } from '@nestjs/cqrs';
+import { CheckUserComplianceQuery, GetOutstandingLeviesQuery, GetEstateComplianceReportQuery } from './cqrs/queries/impl/compliance-queries.impl';
+import { FindUserByIdQuery } from '../users/cqrs/queries/impl/find-user-by-id.query';
 
 @ApiTags('Compliance')
 @ApiBearerAuth()
@@ -20,22 +21,21 @@ import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 @UseGuards(JwtAuthGuard, VerifiedGuard)
 export class ComplianceController {
   constructor(
-    private readonly complianceService: ComplianceService,
-    private readonly usersService: UsersService,
+    private readonly queryBus: QueryBus,
   ) {}
 
   @ApiOperation({ summary: 'Get my compliance status' })
   @ApiResponse({ status: 200, description: 'Compliance status retrieved successfully' })
   @Get('status')
   getStatus(@Request() req) {
-    return this.complianceService.checkUserCompliance(req.user.userId);
+    return this.queryBus.execute(new CheckUserComplianceQuery(req.user.userId));
   }
 
   @ApiOperation({ summary: 'Get my outstanding levies' })
   @ApiResponse({ status: 200, description: 'Outstanding levies retrieved successfully' })
   @Get('outstanding')
   getOutstanding(@Request() req) {
-    return this.complianceService.getOutstandingLevies(req.user.userId);
+    return this.queryBus.execute(new GetOutstandingLeviesQuery(req.user.userId));
   }
 
   @ApiOperation({ summary: 'Get estate-wide compliance report (Admin)' })
@@ -44,12 +44,12 @@ export class ComplianceController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   async getEstateReport(@Request() req) {
-    const user = await this.usersService.findOne(req.user.userId);
+    const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {
       throw new ForbiddenException('User must belong to an estate');
     }
 
-    return this.complianceService.getEstateComplianceReport(user.estateId.toString());
+    return this.queryBus.execute(new GetEstateComplianceReportQuery(user.estateId.toString()));
   }
 }
