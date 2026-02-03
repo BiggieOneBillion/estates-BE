@@ -50,12 +50,12 @@ export class EventDispatcher {
    */
   async dispatch(outboxEntry: OutboxEvent): Promise<void> {
     const handlers = this.handlers.get(outboxEntry.eventType) || [];
+    const correlationId = outboxEntry.correlationId;
 
     if (handlers.length === 0) {
       this.logger.warn(
-        `No handlers registered for event type ${outboxEntry.eventType}`,
+        `[${correlationId}] No handlers registered for event type ${outboxEntry.eventType}`,
       );
-      // Mark as completed even if no handlers (to avoid infinite retries)
       await this.handleSuccess(outboxEntry);
       return;
     }
@@ -67,23 +67,56 @@ export class EventDispatcher {
         { status: OutboxEventStatus.PROCESSING },
       );
 
-      // Execute all handlers
-      const handlerPromises = handlers.map((handler) =>
-        this.executeHandler(handler, outboxEntry),
-      );
+      const handlerStatus = outboxEntry.handlerStatus || new Map();
+      let hasFailures = false;
+      const errors: Error[] = [];
 
-      await Promise.all(handlerPromises);
+      for (const handler of handlers) {
+        const handlerName =
+          handler.getHandlerName?.() || handler.constructor.name;
+
+        // Skip if already completed
+        if (handlerStatus.get(handlerName) === 'completed') {
+          this.logger.debug(
+            `[${correlationId}] Skipping already completed handler ${handlerName} for event ${outboxEntry.eventType}`,
+          );
+          continue;
+        }
+
+        try {
+          await this.executeHandler(handler, outboxEntry);
+          handlerStatus.set(handlerName, 'completed');
+        } catch (error) {
+          this.logger.error(
+            `[${correlationId}] Handler ${handlerName} failed for event ${outboxEntry.eventType}: ${error.message}`,
+          );
+          handlerStatus.set(handlerName, 'failed');
+          hasFailures = true;
+          errors.push(error);
+        }
+
+        // Update handler status in database incrementally
+        await this.outboxModel.updateOne(
+          { _id: outboxEntry._id },
+          { handlerStatus },
+        );
+      }
+
+      if (hasFailures) {
+        throw new Error(
+          `Some handlers failed: ${errors.map((e) => e.message).join(', ')}`,
+        );
+      }
 
       // Mark as completed
       await this.handleSuccess(outboxEntry);
 
       this.logger.log(
-        `Successfully dispatched event ${outboxEntry.eventType} (ID: ${outboxEntry.eventId})`,
+        `[${correlationId}] Successfully dispatched event ${outboxEntry.eventType} (ID: ${outboxEntry.eventId})`,
       );
     } catch (error) {
       this.logger.error(
-        `Failed to dispatch event ${outboxEntry.eventType} (ID: ${outboxEntry.eventId}): ${error.message}`,
-        error.stack,
+        `[${correlationId}] Failed to dispatch event ${outboxEntry.eventType} (ID: ${outboxEntry.eventId}): ${error.message}`,
       );
       await this.handleFailure(outboxEntry, error);
     }
@@ -96,48 +129,44 @@ export class EventDispatcher {
     handler: EventHandler,
     outboxEntry: OutboxEvent,
   ): Promise<void> {
-    try {
-      // Reconstruct the domain event from the payload
-      const event = this.reconstructEvent(outboxEntry);
-      await handler.handle(event);
+    // Reconstruct the domain event from the payload
+    const event = this.reconstructEvent(outboxEntry);
+    await handler.handle(event);
 
-      this.logger.debug(
-        `Handler ${handler.getHandlerName?.() || handler.constructor.name} completed for event ${outboxEntry.eventType}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Handler ${handler.getHandlerName?.() || handler.constructor.name} failed for event ${outboxEntry.eventType}: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
+    this.logger.debug(
+      `[${outboxEntry.correlationId}] Handler ${handler.getHandlerName?.() || handler.constructor.name} completed for event ${outboxEntry.eventType}`,
+    );
   }
 
   /**
    * Reconstruct a domain event from outbox payload
    */
   private reconstructEvent(outboxEntry: OutboxEvent): BaseDomainEvent {
-    // The payload might be the full toJSON() output or just the data payload
-    // If it's the full output (backward compatibility), extract the nested payload
     const data = outboxEntry.payload.payload || outboxEntry.payload;
 
-    // Return a proxy-like object that satisfies BaseDomainEvent interface
-    // and specifically provides getPayload() which handlers use
     return {
       eventId: outboxEntry.eventId,
       eventType: outboxEntry.eventType,
       aggregateId: outboxEntry.aggregateId,
       aggregateType: outboxEntry.aggregateType,
+      version: outboxEntry.version || 1,
       occurredAt: outboxEntry.createdAt as any as Date,
-      metadata: outboxEntry.metadata || {},
+      metadata: {
+        ...(outboxEntry.metadata || {}),
+        correlationId: outboxEntry.correlationId,
+      },
       getPayload: () => data,
       toJSON: () => ({
         eventId: outboxEntry.eventId,
         eventType: outboxEntry.eventType,
         aggregateId: outboxEntry.aggregateId,
         aggregateType: outboxEntry.aggregateType,
+        version: outboxEntry.version || 1,
         occurredAt: outboxEntry.createdAt,
-        metadata: outboxEntry.metadata,
+        metadata: {
+          ...(outboxEntry.metadata || {}),
+          correlationId: outboxEntry.correlationId,
+        },
         payload: data,
       }),
     } as any as BaseDomainEvent;
