@@ -20,14 +20,16 @@ export class AuditLogHandler implements EventHandler {
   }
 
   async handle(event: BaseDomainEvent): Promise<void> {
-    try {
-      this.logger.debug(`Auditing event: ${event.eventType}`);
-      
-      const payload = event.getPayload();
-      const metadata = event.metadata || {};
+    const payload = event.getPayload();
+    const metadata = event.metadata || {};
 
-      await this.commandBus.execute(new CreateAuditLogCommand({
-        userId: metadata.userId || (payload as any).userId || (payload as any).actorId,
+    await this.commandBus.execute(
+      new CreateAuditLogCommand({
+        eventId: event.eventId,
+        userId:
+          metadata.userId ||
+          (payload as any).userId ||
+          (payload as any).actorId,
         action: event.eventType,
         resource: event.aggregateType,
         resourceId: event.aggregateId,
@@ -38,10 +40,7 @@ export class AuditLogHandler implements EventHandler {
           estateId: metadata.estateId || (payload as any).estateId,
         },
         timestamp: event.occurredAt,
-      }));
-    } catch (error) {
-      this.logger.error(`Failed to audit event ${event.eventType}: ${error.message}`);
-      // We don't throw here to avoid failing the main event processing
-    }
+      }),
+    );
   }
 }

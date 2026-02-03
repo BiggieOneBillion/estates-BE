@@ -18,6 +18,9 @@ export class AuditLog extends Document {
   @Prop({ type: MongooseSchema.Types.Mixed, ref: 'User', index: true })
   userId: MongooseSchema.Types.ObjectId | string;
 
+  @Prop({ index: true, unique: true, sparse: true })
+  eventId?: string; // Links this log to a specific domain event
+
   @Prop({ required: true, index: true })
   action: string; // e.g., 'user.created', 'payment.completed'
 
