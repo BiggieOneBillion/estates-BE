@@ -14,6 +14,8 @@ import { VerifiedGuard } from 'src/auth/guards/verified.guard';
 import { QueryBus } from '@nestjs/cqrs';
 import { CheckUserComplianceQuery, GetOutstandingLeviesQuery, GetEstateComplianceReportQuery } from './cqrs/queries/impl/compliance-queries.impl';
 import { FindUserByIdQuery } from '../users/cqrs/queries/impl/find-user-by-id.query';
+import { ComplianceStatusDto, EstateComplianceReportDto } from './cqrs/queries/dto/compliance.response.dto';
+import { LevyResponseDto } from '../levies/dto/response/levy.response.dto';
 
 @ApiTags('Compliance')
 @ApiBearerAuth()
@@ -25,25 +27,25 @@ export class ComplianceController {
   ) {}
 
   @ApiOperation({ summary: 'Get my compliance status' })
-  @ApiResponse({ status: 200, description: 'Compliance status retrieved successfully' })
+  @ApiResponse({ status: 200, type: ComplianceStatusDto, description: 'Compliance status retrieved successfully' })
   @Get('status')
-  getStatus(@Request() req) {
+  getStatus(@Request() req): Promise<ComplianceStatusDto> {
     return this.queryBus.execute(new CheckUserComplianceQuery(req.user.userId));
   }
 
   @ApiOperation({ summary: 'Get my outstanding levies' })
-  @ApiResponse({ status: 200, description: 'Outstanding levies retrieved successfully' })
+  @ApiResponse({ status: 200, type: [LevyResponseDto], description: 'Outstanding levies retrieved successfully' })
   @Get('outstanding')
-  getOutstanding(@Request() req) {
+  getOutstanding(@Request() req): Promise<LevyResponseDto[]> {
     return this.queryBus.execute(new GetOutstandingLeviesQuery(req.user.userId));
   }
 
   @ApiOperation({ summary: 'Get estate-wide compliance report (Admin)' })
-  @ApiResponse({ status: 200, description: 'Compliance report retrieved successfully' })
+  @ApiResponse({ status: 200, type: EstateComplianceReportDto, description: 'Compliance report retrieved successfully' })
   @Get('estate-report')
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async getEstateReport(@Request() req) {
+  async getEstateReport(@Request() req): Promise<EstateComplianceReportDto> {
     const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {

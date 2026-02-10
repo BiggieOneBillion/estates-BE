@@ -28,6 +28,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from 'src/users/entities/user.entity';
 import { Roles } from 'src/auth/decorators/role.decorator';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
+import { PropertyResponseDto } from './dto/response/property.response.dto';
 
 @ApiTags('Properties')
 @ApiBearerAuth()
@@ -43,11 +44,11 @@ export class PropertiesController {
     summary: 'Create a new property',
     description: 'Allows Super Admins, Admins, or Landlords to register a new property.',
   })
-  @ApiResponse({ status: 201, description: 'Property created successfully' })
+  @ApiResponse({ status: 201, type: PropertyResponseDto, description: 'Property created successfully' })
   @Post()
   @UseGuards(RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.LANDLORD)
-  create(@Body() createPropertyDto: CreatePropertyDto) {
+  create(@Body() createPropertyDto: CreatePropertyDto): Promise<PropertyResponseDto> {
     return this.commandBus.execute(new CreatePropertyCommand(createPropertyDto));
   }
 
@@ -55,9 +56,9 @@ export class PropertiesController {
     summary: 'Get all properties',
     description: 'Retrieves a list of all properties.',
   })
-  @ApiResponse({ status: 200, description: 'List of all properties' })
+  @ApiResponse({ status: 200, type: [PropertyResponseDto], description: 'List of all properties' })
   @Get()
-  findAll() {
+  findAll(): Promise<PropertyResponseDto[]> {
     return this.queryBus.execute(new FindAllPropertiesQuery());
   }
 
@@ -65,9 +66,9 @@ export class PropertiesController {
     summary: 'Get properties by estate',
     description: 'Retrieves all properties belonging to a specific estate.',
   })
-  @ApiResponse({ status: 200, description: 'List of properties in the estate' })
+  @ApiResponse({ status: 200, type: [PropertyResponseDto], description: 'List of properties in the estate' })
   @Get('estate/:estateId')
-  findByEstate(@Param('estateId') estateId: string) {
+  findByEstate(@Param('estateId') estateId: string): Promise<PropertyResponseDto[]> {
     return this.queryBus.execute(new FindAllPropertiesQuery(estateId));
   }
 
@@ -75,10 +76,10 @@ export class PropertiesController {
     summary: 'Get property by ID',
     description: 'Retrieves details of a specific property.',
   })
-  @ApiResponse({ status: 200, description: 'Property details' })
+  @ApiResponse({ status: 200, type: PropertyResponseDto, description: 'Property details' })
   @ApiResponse({ status: 404, description: 'Property not found' })
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string): Promise<PropertyResponseDto> {
     return this.queryBus.execute(new FindPropertyByIdQuery(id));
   }
 

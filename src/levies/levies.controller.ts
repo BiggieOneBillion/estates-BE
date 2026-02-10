@@ -20,6 +20,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/role.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { VerifiedGuard } from 'src/auth/guards/verified.guard';
+import { LevyResponseDto } from './dto/response/levy.response.dto';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CreateLevyCommand, UpdateLevyCommand, DeleteLevyCommand } from './cqrs/commands/impl/levy-commands.impl';
 import { FindAllLeviesQuery, FindActiveLeviesQuery, FindLevyByIdQuery } from './cqrs/queries/impl/levy-queries.impl';
@@ -37,10 +38,10 @@ export class LeviesController {
   ) {}
 
   @ApiOperation({ summary: 'Create a new levy' })
-  @ApiResponse({ status: 201, description: 'Levy created successfully' })
+  @ApiResponse({ status: 201, type: LevyResponseDto, description: 'Levy created successfully' })
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  async create(@Body() createLevyDto: CreateLevyDto, @Request() req) {
+  async create(@Body() createLevyDto: CreateLevyDto, @Request() req): Promise<LevyResponseDto> {
     const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {
@@ -51,9 +52,9 @@ export class LeviesController {
   }
 
   @ApiOperation({ summary: 'Get all levies for estate' })
-  @ApiResponse({ status: 200, description: 'Levies retrieved successfully' })
+  @ApiResponse({ status: 200, type: [LevyResponseDto], description: 'Levies retrieved successfully' })
   @Get()
-  async findAll(@Request() req) {
+  async findAll(@Request() req): Promise<LevyResponseDto[]> {
     const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {
@@ -64,9 +65,9 @@ export class LeviesController {
   }
 
   @ApiOperation({ summary: 'Get active levies only' })
-  @ApiResponse({ status: 200, description: 'Active levies retrieved successfully' })
+  @ApiResponse({ status: 200, type: [LevyResponseDto], description: 'Active levies retrieved successfully' })
   @Get('active')
-  async findActive(@Request() req) {
+  async findActive(@Request() req): Promise<LevyResponseDto[]> {
     const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {
@@ -77,9 +78,9 @@ export class LeviesController {
   }
 
   @ApiOperation({ summary: 'Get levy by ID' })
-  @ApiResponse({ status: 200, description: 'Levy retrieved successfully' })
+  @ApiResponse({ status: 200, type: LevyResponseDto, description: 'Levy retrieved successfully' })
   @Get(':id')
-  async findOne(@Param('id') id: string, @Request() req) {
+  async findOne(@Param('id') id: string, @Request() req): Promise<LevyResponseDto> {
     const user = await this.queryBus.execute(new FindUserByIdQuery(req.user.userId));
     
     if (!user.estateId) {

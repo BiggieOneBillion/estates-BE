@@ -13,14 +13,18 @@ export abstract class BaseDomainEvent {
   public readonly occurredAt: Date;
   public readonly metadata: DomainEventMetadata;
 
+  public readonly version: number;
+
   constructor(
     public readonly eventType: string,
     public readonly aggregateId: string,
     public readonly aggregateType: string,
     metadata: DomainEventMetadata = {},
+    version: number = 1,
   ) {
     this.eventId = randomUUID();
     this.occurredAt = new Date();
+    this.version = version;
     this.metadata = {
       correlationId: metadata.correlationId || randomUUID(),
       ...metadata,

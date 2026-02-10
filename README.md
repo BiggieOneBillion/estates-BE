@@ -1,27 +1,53 @@
 # Estate Management System
 
-A modern, scalable Estate Management System built with **NestJS** and **MongoDB**. This project provides a comprehensive solution for managing estates, properties, and community access.
+A enterprise-grade, scalable Estate Management System built with **NestJS** and **MongoDB**. Designed for robustness, high availability, and secure community management.
 
 ---
 
 ## 🚀 Key Features
 
-- **Multi-Role User Management**: Support for Super Admins, Site Admins, Landlords, Tenants, and Security.
-- **Estate & Property Organization**: Manage units, assignments, and supporting documents.
-- **Gate Pass System**: Pre-authorize visitors with secure, temporary tokens.
-- **Real-time Notifications**: Instant alerts for important estate activities.
-- **Media Support**: Integrated Cloudinary support for document and image storage.
+- **Advanced Role-Based Access Control (RBAC)**: Fine-grained permissions for Super Admins, Site Admins, Landlords, Tenants, and Security.
+- **Visitor Management (Gate Pass)**: Secure, temporary tokens for community access with mandatory security verification and ID documentation.
+- **Automated Compliance Enforcement**: Real-time restriction of estate privileges (like gate pass generation) based on levy payment status.
+- **Financial Orchestration**: Support for both manual and online (Paystack) payments with automated reconciliation.
+- **Distributed Auditing**: Comprehensive audit trail for every critical action, ensuring accountability across the system.
+- **Real-time Engine**: WebSocket-based notifications for tenant alerts and security updates.
+- **Media Engine**: Cloud-native image and document management via Cloudinary.
+
+---
+
+## 🏛️ Design Principles
+
+The system is built on modern distributed systems patterns:
+
+- **CQRS (Command Query Responsibility Segregation)**: Explicit separation of "Write" operations (Commands) and "Read" operations (Queries) to allow independent optimization.
+- **Transactional Outbox Pattern**: Ensures reliable consistency between the primary database and asynchronous events (Email, Notifs) even during system failures.
+- **Event-Driven Architecture**: Decoupled services communicating via high-performance BullMQ queues.
+- **Idempotency by Design**: Event handlers (like Audit Logging) are resilient to retries, preventing duplicate processing.
+- **Observability**: Distributed tracing integrated with OpenTelemetry and Jaeger for deep system visibility.
+
+---
+
+## �️ Technology Stack
+
+| Category | Technology |
+| :--- | :--- |
+| **Core Framework** | [NestJS](https://nestjs.com/) (Node.js) |
+| **Primary Database** | [MongoDB](https://www.mongodb.com/) (Mongoose ODM) |
+| **Cache & Queues** | [Redis](https://redis.io/) (BullMQ) |
+| **Real-time** | [Socket.io](https://socket.io/) (Redis Adapter for scaling) |
+| **Observability** | OpenTelemetry / Jaeger / BullBoard |
+| **Communication** | Nodemailer (Ethereal/SMTP) / Firebase (FCM) |
+| **Security** | Passport.js (JWT) / 2FA (OTP) |
 
 ---
 
 ## 📂 Documentation
 
-We've broken down our documentation into specialized sections for better readability:
-
-- 🏗️ **[Architecture](docs/architecture.md)**: Tech stack and system overview.
-- ⚙️ **[Setup & Installation](docs/setup.md)**: How to get the project running.
-- 🔌 **[API Overview](docs/api.md)**: Core features and endpoint logic.
-- 🗄️ **[Database Schema](docs/database.md)**: Data structures and relationships.
+- 🏗️ **[Architecture Overview](docs/architecture.md)**: Deep dive into the tech stack and system design.
+- ✅ **[QA & Workflow Guide](docs/QA_GUIDE.md)**: Step-by-step business flows for testing and integration.
+- ⚙️ **[Setup & Installation](docs/setup.md)**: Getting started with development and production.
+- � **[API Data Contract](API_CONTRACT.md)**: Full list of endpoints, request bodies, and responses.
 
 ---
 
@@ -50,15 +76,6 @@ npm run start:prod
 npm run test
 ```
 
----
-
-## 🛠️ Built With
-
-- **Framework**: [NestJS](https://nestjs.com/)
-- **Database**: [MongoDB](https://www.mongodb.com/) (Mongoose)
-- **Validation**: Joi / Class-validator
-- **Security**: Passport + JWT
-- **Communication**: Socket.io
 
 ---
 

@@ -4,6 +4,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User } from '../../../entities/user.entity';
 import { SoftDeleteModel } from 'src/common/database/soft-delete.plugin';
 import { NotFoundException } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { UserResponseDto } from '../../../dto/response/user.response.dto';
 
 @QueryHandler(FindUserByIdQuery)
 export class FindUserByIdHandler implements IQueryHandler<FindUserByIdQuery> {
@@ -11,11 +13,11 @@ export class FindUserByIdHandler implements IQueryHandler<FindUserByIdQuery> {
     @InjectModel(User.name) private readonly userModel: SoftDeleteModel<User>,
   ) {}
 
-  async execute(query: FindUserByIdQuery): Promise<User> {
+  async execute(query: FindUserByIdQuery): Promise<UserResponseDto> {
     const user = await this.userModel.findById(query.userId).exec();
     if (!user) {
       throw new NotFoundException(`User with ID ${query.userId} not found`);
     }
-    return user;
+    return plainToInstance(UserResponseDto, user.toObject(), { excludeExtraneousValues: true });
   }
 }

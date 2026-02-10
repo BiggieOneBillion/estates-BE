@@ -1,13 +1,15 @@
-import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { PropertyResponseDto } from './dto/response/property.response.dto';
 export declare class PropertiesController {
-    private readonly propertiesService;
-    constructor(propertiesService: PropertiesService);
-    create(createPropertyDto: CreatePropertyDto): Promise<import("./entities/property.entity").Property>;
-    findAll(): Promise<import("./entities/property.entity").Property[]>;
-    findByEstate(estateId: string): Promise<import("./entities/property.entity").Property[]>;
-    findOne(id: string): Promise<import("./entities/property.entity").Property>;
-    update(id: string, updatePropertyDto: UpdatePropertyDto): Promise<import("./entities/property.entity").Property>;
-    remove(id: string): Promise<void>;
+    private readonly commandBus;
+    private readonly queryBus;
+    constructor(commandBus: CommandBus, queryBus: QueryBus);
+    create(createPropertyDto: CreatePropertyDto): Promise<PropertyResponseDto>;
+    findAll(): Promise<PropertyResponseDto[]>;
+    findByEstate(estateId: string): Promise<PropertyResponseDto[]>;
+    findOne(id: string): Promise<PropertyResponseDto>;
+    update(id: string, updatePropertyDto: UpdatePropertyDto): Promise<any>;
+    remove(id: string): Promise<any>;
 }

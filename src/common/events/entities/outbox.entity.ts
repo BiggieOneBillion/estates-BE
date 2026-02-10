@@ -23,6 +23,12 @@ export class OutboxEvent extends Document {
   @Prop({ required: true })
   aggregateType: string;
 
+  @Prop({ required: true, default: 1 })
+  version: number;
+
+  @Prop({ required: true, index: true })
+  correlationId: string;
+
   @Prop({ type: Object, required: true })
   payload: Record<string, any>;
 
@@ -33,6 +39,9 @@ export class OutboxEvent extends Document {
     index: true,
   })
   status: OutboxEventStatus;
+
+  @Prop({ type: Map, of: String, default: {} })
+  handlerStatus: Map<string, string>; // handlerName -> status (completed, failed)
 
   @Prop({ default: 0 })
   retryCount: number;

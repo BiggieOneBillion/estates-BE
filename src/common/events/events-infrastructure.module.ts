@@ -2,6 +2,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
+import { CqrsModule } from '@nestjs/cqrs';
 import { OutboxEvent, OutboxEventSchema } from './entities/outbox.entity';
 import {
   DeadLetterEvent,
@@ -43,6 +44,7 @@ import { AuditLogHandler } from 'src/audit-logs/handlers/audit-log.handler';
       { name: OutboxEvent.name, schema: OutboxEventSchema },
       { name: DeadLetterEvent.name, schema: DeadLetterEventSchema },
     ]),
+    CqrsModule,
   ],
   providers: [
     // Core services

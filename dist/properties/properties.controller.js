@@ -15,36 +15,44 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PropertiesController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
-const properties_service_1 = require("./properties.service");
 const create_property_dto_1 = require("./dto/create-property.dto");
 const update_property_dto_1 = require("./dto/update-property.dto");
+const cqrs_1 = require("@nestjs/cqrs");
+const create_property_command_1 = require("./cqrs/commands/impl/create-property.command");
+const update_property_command_1 = require("./cqrs/commands/impl/update-property.command");
+const delete_property_command_1 = require("./cqrs/commands/impl/delete-property.command");
+const find_all_properties_query_1 = require("./cqrs/queries/impl/find-all-properties.query");
+const find_property_by_id_query_1 = require("./cqrs/queries/impl/find-property-by-id.query");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const user_entity_1 = require("../users/entities/user.entity");
 const role_decorator_1 = require("../auth/decorators/role.decorator");
 const verified_guard_1 = require("../auth/guards/verified.guard");
+const property_response_dto_1 = require("./dto/response/property.response.dto");
 let PropertiesController = class PropertiesController {
-    propertiesService;
-    constructor(propertiesService) {
-        this.propertiesService = propertiesService;
+    commandBus;
+    queryBus;
+    constructor(commandBus, queryBus) {
+        this.commandBus = commandBus;
+        this.queryBus = queryBus;
     }
     create(createPropertyDto) {
-        return this.propertiesService.create(createPropertyDto);
+        return this.commandBus.execute(new create_property_command_1.CreatePropertyCommand(createPropertyDto));
     }
     findAll() {
-        return this.propertiesService.findAll();
+        return this.queryBus.execute(new find_all_properties_query_1.FindAllPropertiesQuery());
     }
     findByEstate(estateId) {
-        return this.propertiesService.findByEstate(estateId);
+        return this.queryBus.execute(new find_all_properties_query_1.FindAllPropertiesQuery(estateId));
     }
     findOne(id) {
-        return this.propertiesService.findOne(id);
+        return this.queryBus.execute(new find_property_by_id_query_1.FindPropertyByIdQuery(id));
     }
     update(id, updatePropertyDto) {
-        return this.propertiesService.update(id, updatePropertyDto);
+        return this.commandBus.execute(new update_property_command_1.UpdatePropertyCommand(id, updatePropertyDto));
     }
     remove(id) {
-        return this.propertiesService.remove(id);
+        return this.commandBus.execute(new delete_property_command_1.DeletePropertyCommand(id));
     }
 };
 exports.PropertiesController = PropertiesController;
@@ -53,50 +61,50 @@ __decorate([
         summary: 'Create a new property',
         description: 'Allows Super Admins, Admins, or Landlords to register a new property.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'Property created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 201, type: property_response_dto_1.PropertyResponseDto, description: 'Property created successfully' }),
     (0, common_1.Post)(),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.SUPER_ADMIN, user_entity_1.UserRole.ADMIN, user_entity_1.UserRole.LANDLORD),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_property_dto_1.CreatePropertyDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], PropertiesController.prototype, "create", null);
 __decorate([
     (0, swagger_1.ApiOperation)({
         summary: 'Get all properties',
         description: 'Retrieves a list of all properties.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of all properties' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: [property_response_dto_1.PropertyResponseDto], description: 'List of all properties' }),
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], PropertiesController.prototype, "findAll", null);
 __decorate([
     (0, swagger_1.ApiOperation)({
         summary: 'Get properties by estate',
         description: 'Retrieves all properties belonging to a specific estate.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of properties in the estate' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: [property_response_dto_1.PropertyResponseDto], description: 'List of properties in the estate' }),
     (0, common_1.Get)('estate/:estateId'),
     __param(0, (0, common_1.Param)('estateId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], PropertiesController.prototype, "findByEstate", null);
 __decorate([
     (0, swagger_1.ApiOperation)({
         summary: 'Get property by ID',
         description: 'Retrieves details of a specific property.',
     }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Property details' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: property_response_dto_1.PropertyResponseDto, description: 'Property details' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Property not found' }),
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], PropertiesController.prototype, "findOne", null);
 __decorate([
     (0, swagger_1.ApiOperation)({
@@ -132,6 +140,7 @@ exports.PropertiesController = PropertiesController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('properties'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard),
-    __metadata("design:paramtypes", [properties_service_1.PropertiesService])
+    __metadata("design:paramtypes", [cqrs_1.CommandBus,
+        cqrs_1.QueryBus])
 ], PropertiesController);
 //# sourceMappingURL=properties.controller.js.map

@@ -1,14 +1,14 @@
-import { EstatesService } from './estates.service';
 import { CreateEstateDto } from './dto/create-estate.dto';
 import { UpdateEstateDto } from './dto/update-estate.dto';
-import { UsersService } from 'src/users/users.service';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { EstateResponseDto } from './dto/response/estate.response.dto';
 export declare class EstatesController {
-    private readonly estatesService;
-    private readonly usersService;
-    constructor(estatesService: EstatesService, usersService: UsersService);
-    create(createEstateDto: CreateEstateDto, request: any): Promise<import("./entities/estate.entity").Estate>;
-    findAll(): Promise<import("./entities/estate.entity").Estate[]>;
-    findOne(id: string, request: any): Promise<import("./entities/estate.entity").Estate>;
-    update(id: string, updateEstateDto: UpdateEstateDto, request: any): Promise<import("./entities/estate.entity").Estate>;
-    remove(id: string, request: any): Promise<void>;
+    private readonly commandBus;
+    private readonly queryBus;
+    constructor(commandBus: CommandBus, queryBus: QueryBus);
+    create(createEstateDto: CreateEstateDto, request: any): Promise<EstateResponseDto>;
+    findAll(): Promise<EstateResponseDto[]>;
+    findOne(id: string, request: any): Promise<EstateResponseDto>;
+    update(id: string, updateEstateDto: UpdateEstateDto, request: any): Promise<any>;
+    remove(id: string, request: any): Promise<any>;
 }

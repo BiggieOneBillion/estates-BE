@@ -14,7 +14,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TokenController = void 0;
 const common_1 = require("@nestjs/common");
-const token_service_1 = require("./token.service");
 const create_token_dto_1 = require("./dto/create-token.dto");
 const update_token_dto_1 = require("./dto/update-token.dto");
 const means_of_identification_dto_1 = require("./dto/means-of-identification.dto");
@@ -23,21 +22,29 @@ const swagger_1 = require("@nestjs/swagger");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const user_entity_1 = require("../users/entities/user.entity");
 const role_decorator_1 = require("../auth/decorators/role.decorator");
-const users_service_1 = require("../users/users.service");
 const platform_express_1 = require("@nestjs/platform-express");
 const cloudinary_service_1 = require("../cloudinary/cloudinary.service");
 const verified_guard_1 = require("../auth/guards/verified.guard");
+const token_response_dto_1 = require("./dto/response/token.response.dto");
+const cqrs_1 = require("@nestjs/cqrs");
+const create_token_command_1 = require("./cqrs/commands/impl/create-token.command");
+const update_token_command_1 = require("./cqrs/commands/impl/update-token.command");
+const delete_token_command_1 = require("./cqrs/commands/impl/delete-token.command");
+const verify_token_command_1 = require("./cqrs/commands/impl/verify-token.command");
+const verify_visitor_token_command_1 = require("./cqrs/commands/impl/verify-visitor-token.command");
+const token_queries_impl_1 = require("./cqrs/queries/impl/token-queries.impl");
+const find_user_by_id_query_1 = require("../users/cqrs/queries/impl/find-user-by-id.query");
 let TokenController = class TokenController {
-    tokenService;
-    userService;
     cloudinaryService;
-    constructor(tokenService, userService, cloudinaryService) {
-        this.tokenService = tokenService;
-        this.userService = userService;
+    commandBus;
+    queryBus;
+    constructor(cloudinaryService, commandBus, queryBus) {
         this.cloudinaryService = cloudinaryService;
+        this.commandBus = commandBus;
+        this.queryBus = queryBus;
     }
     async create(createTokenDto, req) {
-        const user = await this.userService.findOne(req.user.userId);
+        const user = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(req.user.userId));
         if (!user) {
             throw new common_1.BadRequestException('User not found');
         }
@@ -48,25 +55,25 @@ let TokenController = class TokenController {
             throw new common_1.BadRequestException('You are not authorized to create this token');
         }
         console.log('THE VERY END');
-        return this.tokenService.create(createTokenDto, req.user.userId);
+        return this.commandBus.execute(new create_token_command_1.CreateTokenCommand(createTokenDto, req.user.userId));
     }
     async createMeansOfIdentification(file, meansOfIdDto, req) {
         if (!file) {
             throw new common_1.BadRequestException('No identification image uploaded');
         }
-        const token = await this.tokenService.findOne(meansOfIdDto.token);
+        const token = await this.queryBus.execute(new token_queries_impl_1.FindTokenByIdQuery(meansOfIdDto.token));
         const uploadResult = await this.cloudinaryService.uploadImage(file);
-        const updatedToken = await this.tokenService.update(token._id, {
+        const updatedToken = await this.commandBus.execute(new update_token_command_1.UpdateTokenCommand(token._id, {
             meansOfId: meansOfIdDto.meansOfId,
             idImgUrl: uploadResult.secure_url,
-        }, req.user.userId, true);
+        }, req.user.userId, true));
         return {
             message: 'Means of identification added successfully',
             token: updatedToken,
         };
     }
     async findAll(req, estateId) {
-        const user = await this.userService.findOne(req.user.userId);
+        const user = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(req.user.userId));
         if (!user) {
             throw new common_1.BadRequestException('User not found');
         }
@@ -87,55 +94,55 @@ let TokenController = class TokenController {
                     throw new common_1.BadRequestException('You do not have permission to access token information');
                 }
             }
-            const data = await this.tokenService.findAllByEstate(estateId);
+            const data = await this.queryBus.execute(new token_queries_impl_1.FindTokensByEstateQuery(estateId));
             return data.filter((el) => el.used);
         }
         else {
             if (user.primaryRole !== user_entity_1.UserRole.SITE_ADMIN) {
                 throw new common_1.BadRequestException('Only site admins can view all tokens across estates');
             }
-            return this.tokenService.findAll();
+            return this.queryBus.execute(new token_queries_impl_1.FindAllTokensQuery());
         }
     }
     async findUserTokens(req, param) {
-        const superAdmin = await this.userService.findOne(req.user.userId);
+        const superAdmin = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(req.user.userId));
         if (!superAdmin) {
             throw new common_1.BadRequestException('Super admin not found');
         }
-        const user = await this.userService.findOne(param.id);
+        const user = await this.queryBus.execute(new find_user_by_id_query_1.FindUserByIdQuery(param.id));
         if (!user) {
             throw new common_1.BadRequestException('User not found');
         }
         if (user.estateId?.toString() !== superAdmin.estateId?.toString()) {
             throw new common_1.BadRequestException('You are not authorized to view this user tokens');
         }
-        return this.tokenService.findAllByUser(param.id);
+        return this.queryBus.execute(new token_queries_impl_1.FindTokensByUserQuery(param.id));
     }
     findMyTokens(req) {
-        return this.tokenService.findAllByUser(req.user.userId);
+        return this.queryBus.execute(new token_queries_impl_1.FindTokensByUserQuery(req.user.userId));
     }
     findOne(tokenId) {
-        return this.tokenService.findByTokenString(tokenId);
+        return this.queryBus.execute(new token_queries_impl_1.FindTokenByStringQuery(tokenId));
     }
     verifyToken(token, req) {
-        return this.tokenService.verifyToken(token, req.user.userId);
+        return this.commandBus.execute(new verify_token_command_1.VerifyTokenCommand(token, req.user.userId));
     }
     verifyVisitorToken(token, req) {
-        return this.tokenService.verifyVisitorToken(token, req.user.userId);
+        return this.commandBus.execute(new verify_visitor_token_command_1.VerifyVisitorTokenCommand(token, req.user.userId));
     }
     update(tokenId, updateTokenDto, req) {
         const user = req.user.userId;
-        return this.tokenService.update(tokenId, updateTokenDto, user);
+        return this.commandBus.execute(new update_token_command_1.UpdateTokenCommand(tokenId, updateTokenDto, user));
     }
     remove(tokenId) {
-        return this.tokenService.remove(tokenId);
+        return this.commandBus.execute(new delete_token_command_1.DeleteTokenCommand(tokenId));
     }
 };
 exports.TokenController = TokenController;
 __decorate([
     (0, common_1.Post)(),
     (0, swagger_1.ApiOperation)({ summary: 'Create a new gate pass token for visitors' }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'Token created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 201, type: token_response_dto_1.TokenResponseDto, description: 'Token created successfully' }),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.LANDLORD, user_entity_1.UserRole.TENANT, user_entity_1.UserRole.ADMIN, user_entity_1.UserRole.SUPER_ADMIN),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
@@ -165,7 +172,7 @@ __decorate([
 __decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiOperation)({ summary: 'Get all tokens' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Return all tokens' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: [token_response_dto_1.TokenResponseDto], description: 'Return all tokens' }),
     (0, swagger_1.ApiQuery)({
         name: 'estate',
         required: false,
@@ -181,7 +188,7 @@ __decorate([
 __decorate([
     (0, common_1.Get)('get-user-tokens/:id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get all tokens created by the current user' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Return all user tokens' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: [token_response_dto_1.TokenResponseDto], description: 'Return all user tokens' }),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.SUPER_ADMIN),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Param)()),
@@ -192,22 +199,22 @@ __decorate([
 __decorate([
     (0, common_1.Get)('my-tokens'),
     (0, swagger_1.ApiOperation)({ summary: 'Get all tokens created by the current user' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Return all user tokens' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: [token_response_dto_1.TokenResponseDto], description: 'Return all user tokens' }),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.LANDLORD, user_entity_1.UserRole.TENANT, user_entity_1.UserRole.ADMIN, user_entity_1.UserRole.SUPER_ADMIN),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], TokenController.prototype, "findMyTokens", null);
 __decorate([
     (0, common_1.Get)(':tokenId'),
     (0, swagger_1.ApiOperation)({ summary: 'Get token by id' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'Return token by id' }),
+    (0, swagger_1.ApiResponse)({ status: 200, type: token_response_dto_1.TokenResponseDto, description: 'Return token by id' }),
     (0, role_decorator_1.Roles)(user_entity_1.UserRole.SUPER_ADMIN, user_entity_1.UserRole.SECURITY),
     __param(0, (0, common_1.Param)('tokenId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], TokenController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Get)('verify/:token'),
@@ -260,8 +267,8 @@ exports.TokenController = TokenController = __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('tokens'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, verified_guard_1.VerifiedGuard, roles_guard_1.RolesGuard),
-    __metadata("design:paramtypes", [token_service_1.TokenService,
-        users_service_1.UsersService,
-        cloudinary_service_1.CloudinaryService])
+    __metadata("design:paramtypes", [cloudinary_service_1.CloudinaryService,
+        cqrs_1.CommandBus,
+        cqrs_1.QueryBus])
 ], TokenController);
 //# sourceMappingURL=token.controller.js.map
