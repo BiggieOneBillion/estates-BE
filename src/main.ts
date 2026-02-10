@@ -62,7 +62,11 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api/docs', app, document, {
+    jsonDocumentUrl: 'swagger.json',
+    customJs: 'https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-bundle.js',
+    customCssUrl: 'https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui.css',
+  });
 
     // Prefix all routes with /api
   app.setGlobalPrefix('api');
