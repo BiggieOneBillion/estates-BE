@@ -24,7 +24,7 @@ Authentication is handled via JWT (JSON Web Tokens).
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/auth/login` | User login | *Public* | `LoginDto` { email, password } | `{ accessToken, user }` |
 | `POST` | `/auth/login/verify` | Verify 2FA OTP for login | *Public* | `VerifyLoginDto` { email, otp } | `{ accessToken, user }` |
-| `POST` | `/auth/register` | Register new user | *Public* | `RegisterDto` { email, password, firstName, lastName, phone, ... } | `{ message }` |
+| `POST` | `/auth/register` | Register new estate | *Public* | `RegisterDto` { email, password, firstName, lastName, phone, ... } | `{ message }` |
 | `POST` | `/auth/verify-preauth` | Resolve pre-auth (2FA/Multi-device) | *Auth* | `VerifyPreAuthDto` { code } | `{ accessToken }` |
 | `POST` | `/auth/verify-email` | Verify registration email | *Auth* | `VerifyEmailDto` { code } | `{ message }` |
 | `GET` | `/auth/profile` | Get current user profile | *Auth* | - | `User` object |
